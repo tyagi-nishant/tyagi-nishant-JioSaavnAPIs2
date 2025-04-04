@@ -23,6 +23,9 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const progressBarRef = useRef(null);
+  
+  // State for showing queue sidebar
+  const [showQueue, setShowQueue] = useState(true);
 
   const handleSearch = async () => {
     if (!searchQuery) {
@@ -675,6 +678,24 @@ function App() {
               </button>
             </div>
             
+            {/* Queue toggle button */}
+            <button 
+              className={`queue-toggle ${showQueue ? 'active' : ''}`}
+              onClick={() => setShowQueue(!showQueue)}
+              title="Show/hide queue"
+            >
+              <span className="queue-icon">🎵</span>
+            </button>
+            
+            {/* Queue toggle button with matching style */}
+            <button 
+              className={`player-control ${showQueue ? 'active' : ''}`}
+              onClick={() => setShowQueue(!showQueue)}
+              title="Show/hide queue"
+            >
+              ♫
+            </button>
+            
             {/* Next up display */}
             {songQueue.length > 0 && currentQueueIndex !== -1 && currentQueueIndex < songQueue.length - 1 && (
               <div className="next-up">
@@ -694,6 +715,49 @@ function App() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* Queue Sidebar */}
+      {currentlyPlaying && showQueue && songQueue.length > 0 && (
+        <div className="queue-sidebar">
+          <div className="queue-header">
+            <h3>Queue</h3>
+            <button className="queue-close" onClick={() => setShowQueue(false)}>×</button>
+          </div>
+          
+          <div className="queue-list">
+            {songQueue.map((song, index) => (
+              <div 
+                key={song.id + index}
+                className={`queue-item ${index === currentQueueIndex ? 'current' : ''}`}
+                onClick={() => {
+                  if (index !== currentQueueIndex) {
+                    setCurrentQueueIndex(index);
+                    loadAndPlaySong(song);
+                  }
+                }}
+              >
+                <div className="queue-number">{index + 1}</div>
+                <img 
+                  src={song.image?.[0]?.url} 
+                  alt={song.name} 
+                  className="queue-thumbnail"
+                />
+                <div className="queue-item-info">
+                  <div className="queue-item-name">{song.name}</div>
+                  <div className="queue-item-artist">
+                    {song.artists?.primary?.map(a => a.name).join(', ')}
+                  </div>
+                </div>
+                {index === currentQueueIndex && (
+                  <div className="playing-indicator">
+                    {isPlaying ? '▶️' : '⏸️'}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
