@@ -18,6 +18,7 @@ function App() {
   // New state variables for queue management
   const [songQueue, setSongQueue] = useState([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(-1);
+  const [originalQuery, setOriginalQuery] = useState(''); // Track the original search query
 
   // New state variables for progress bar
   const [currentTime, setCurrentTime] = useState(0);
@@ -26,6 +27,121 @@ function App() {
   
   // State for showing queue sidebar
   const [showQueue, setShowQueue] = useState(true);
+  const [isLoadingMoreSongs, setIsLoadingMoreSongs] = useState(false);
+  const [currentAutoSearchTerm, setCurrentAutoSearchTerm] = useState('');
+
+  // Function to generate similar search terms
+  const generateSimilarSearchTerm = (originalTerm) => {
+    if (!originalTerm) return '';
+    
+    // More variety of modifiers for greater search differentiation
+    const modifiers = [
+      ' song', ' music', ' latest', ' new', ' popular', 
+      ' trending', ' hits', ' best of', ' top', ' classic',
+      ' playlist', ' recommended', ' similar', ' radio', ' station',
+      ' favorite', ' tracks', ' collection', ' series'
+    ];
+    
+    // Alternative approach - sometimes add a prefix instead of suffix
+    const prefixes = ['best ', 'top ', 'new ', 'popular ', 'trending '];
+    
+    // Randomly choose between prefix and suffix modification (20% chance for prefix)
+    const usePrefixInstead = Math.random() < 0.2;
+    
+    if (usePrefixInstead) {
+      const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+      return `${randomPrefix}${originalTerm}`;
+    } else {
+      // Original suffix approach
+      const randomModifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+      return `${originalTerm}${randomModifier}`;
+    }
+  };
+
+  // Function to fetch similar songs and append to queue
+  const fetchAndAppendSimilarSongs = async () => {
+    if (!originalQuery || isLoadingMoreSongs) return;
+    
+    try {
+      // Generate a similar search term
+      const similarSearchTerm = generateSimilarSearchTerm(originalQuery);
+      
+      setIsLoadingMoreSongs(true);
+      setCurrentAutoSearchTerm(similarSearchTerm);
+      
+      console.log(`Extending queue: Original search "${originalQuery}" → New search "${similarSearchTerm}"`);
+      
+      // Display the loading indicator for at least 1 second to ensure user sees it
+      const fetchStartTime = Date.now();
+      
+      const baseUrl = 'https://jio-saavn2.vercel.app/';
+      
+      // Make the search request for songs only
+      const response = await fetch(`${baseUrl}api/search/songs?query=${encodeURIComponent(similarSearchTerm)}&limit=20`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data && data.data.results) {
+        const newSongs = data.data.results;
+        
+        // Filter out any songs that are already in the queue (by id)
+        const existingIds = new Set(songQueue.map(song => song.id));
+        const filteredNewSongs = newSongs.filter(song => !existingIds.has(song.id));
+        
+        if (filteredNewSongs.length > 0) {
+          // Append new songs to the queue
+          setSongQueue(prevQueue => [...prevQueue, ...filteredNewSongs]);
+          console.log(`Added ${filteredNewSongs.length} similar songs to the queue using "${similarSearchTerm}"`);
+        } else {
+          console.log(`No new songs found for "${similarSearchTerm}" - all results already in queue`);
+          
+          // If no new songs found, try with a completely different search term
+          if (originalQuery) {
+            const words = originalQuery.split(' ');
+            if (words.length > 0) {
+              // Take just one word from the original query if possible
+              const baseWord = words[0];
+              const fallbackTerm = baseWord + " popular songs";
+              
+              console.log(`Trying fallback search with "${fallbackTerm}"`);
+              
+              const fallbackResponse = await fetch(`${baseUrl}api/search/songs?query=${encodeURIComponent(fallbackTerm)}&limit=20`);
+              if (fallbackResponse.ok) {
+                const fallbackData = await fallbackResponse.json();
+                
+                if (fallbackData.success && fallbackData.data && fallbackData.data.results) {
+                  const fallbackSongs = fallbackData.data.results;
+                  
+                  // Filter out any songs that are already in the queue (by id)
+                  const filteredFallbackSongs = fallbackSongs.filter(song => !existingIds.has(song.id));
+                  
+                  if (filteredFallbackSongs.length > 0) {
+                    // Append new songs to the queue
+                    setSongQueue(prevQueue => [...prevQueue, ...filteredFallbackSongs]);
+                    console.log(`Added ${filteredFallbackSongs.length} fallback songs to the queue using "${fallbackTerm}"`);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Ensure loading indicator displays for at least 1 second
+      const fetchEndTime = Date.now();
+      const fetchDuration = fetchEndTime - fetchStartTime;
+      if (fetchDuration < 1000) {
+        await new Promise(resolve => setTimeout(resolve, 1000 - fetchDuration));
+      }
+    } catch (error) {
+      console.error('Error fetching similar songs:', error);
+    } finally {
+      setIsLoadingMoreSongs(false);
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchQuery) {
@@ -35,6 +151,9 @@ function App() {
     setSearchResults(null); // Clear previous results and indicate loading (optional)
     try {
       const baseUrl = 'https://jio-saavn2.vercel.app/';
+      
+      // Store the original query when performing a search
+      setOriginalQuery(searchQuery);
       
       // Make the global search request
       const response = await fetch(`${baseUrl}api/search?query=${encodeURIComponent(searchQuery)}`);
@@ -138,6 +257,11 @@ function App() {
       if (songIndex !== -1) {
         setSongQueue(contextSongs);
         setCurrentQueueIndex(songIndex);
+        
+        // When playing from search results, make sure we capture the original query
+        if (!selectedDetail && searchQuery) {
+          setOriginalQuery(searchQuery);
+        }
       } else {
         // If the song isn't in the context songs (shouldn't happen normally)
         setSongQueue([song]);
@@ -241,13 +365,32 @@ function App() {
   }, [audioUrl, isPlaying]);
 
   // Function to play the next song in queue
-  const playNextSong = () => {
+  const playNextSong = async () => {
     if (songQueue.length === 0 || currentQueueIndex === -1) return;
     
-    const nextIndex = (currentQueueIndex + 1) % songQueue.length;
-    setCurrentQueueIndex(nextIndex);
-    setIsPlaying(true); // Set to playing state immediately
-    loadAndPlaySong(songQueue[nextIndex]);
+    const nextIndex = currentQueueIndex + 1;
+    
+    // Check if we're at the last song or about to play the last song
+    if (nextIndex >= songQueue.length - 1) {
+      // We're on the last song or about to play it, fetch more similar songs
+      // Wait for the fetch to complete before proceeding
+      await fetchAndAppendSimilarSongs();
+    }
+    
+    // Get the updated queue length after potential new songs were added
+    const updatedNextIndex = currentQueueIndex + 1;
+    
+    // Play the next song if available
+    if (updatedNextIndex < songQueue.length) {
+      setCurrentQueueIndex(updatedNextIndex);
+      setIsPlaying(true); // Set to playing state immediately
+      loadAndPlaySong(songQueue[updatedNextIndex]);
+    } else {
+      // Loop back to the beginning if we've reached the end
+      setCurrentQueueIndex(0);
+      setIsPlaying(true);
+      loadAndPlaySong(songQueue[0]);
+    }
   };
   
   // Function to play the previous song in queue
@@ -282,7 +425,9 @@ function App() {
 
   // Handle track ending - play next song
   const handleTrackEnded = () => {
-    playNextSong(); // Don't set isPlaying to false here, let the next song start playing
+    // Use void to ignore the promise since we can't make this function async
+    // (it's used directly as an event handler)
+    void playNextSong();
   };
 
   // Handle pressing Enter key in search field
@@ -298,6 +443,9 @@ function App() {
     setSelectedDetail(album);
     setDetailType('album');
     setDetailSongs([]);
+    
+    // Set original query to album name for future auto-queue
+    setOriginalQuery(album.name);
     
     try {
       const baseUrl = 'https://jio-saavn2.vercel.app/';
@@ -328,6 +476,9 @@ function App() {
     setDetailType('artist');
     setDetailSongs([]);
     
+    // Set original query to artist name for future auto-queue
+    setOriginalQuery(artist.name);
+    
     try {
       const baseUrl = 'https://jio-saavn2.vercel.app/';
       const response = await fetch(`${baseUrl}api/artists?id=${artist.id}`);
@@ -356,6 +507,9 @@ function App() {
     setSelectedDetail(playlist);
     setDetailType('playlist');
     setDetailSongs([]);
+    
+    // Set original query to playlist name for future auto-queue
+    setOriginalQuery(playlist.name);
     
     try {
       const baseUrl = 'https://jio-saavn2.vercel.app/';
@@ -747,6 +901,13 @@ function App() {
                 )}
               </div>
             ))}
+            
+            {isLoadingMoreSongs && (
+              <div className="queue-loading-indicator">
+                <div className="loading-spinner"></div>
+                <div>Adding more songs to queue using "{currentAutoSearchTerm}"</div>
+              </div>
+            )}
           </div>
         </div>
       )}
