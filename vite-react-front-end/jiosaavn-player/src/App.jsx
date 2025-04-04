@@ -19,6 +19,11 @@ function App() {
   const [songQueue, setSongQueue] = useState([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(-1);
 
+  // New state variables for progress bar
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const progressBarRef = useRef(null);
+
   const handleSearch = async () => {
     if (!searchQuery) {
       setSearchResults(null); // Clear results if query is empty
@@ -140,12 +145,12 @@ function App() {
     loadAndPlaySong(song);
   };
   
-  // New function to load and play a song
+  // Function to load and play a song
   const loadAndPlaySong = async (song) => {
-    setCurrentlyPlaying(song);
-    setIsPlaying(true);
-    
     try {
+      setCurrentlyPlaying(song);
+      setIsPlaying(true); // Set to playing state
+      
       // First, we need to get detailed song info which includes the download URLs
       const baseUrl = 'https://jio-saavn2.vercel.app/';
       const response = await fetch(`${baseUrl}api/songs?ids=${song.id}`);
@@ -172,27 +177,68 @@ function App() {
         }
         
         if (selectedUrl) {
+          // Update the audio directly to ensure immediate playback
+          if (audioRef.current) {
+            // Directly set audio properties
+            audioRef.current.src = selectedUrl;
+            
+            // Force play after source is set
+            const playPromise = audioRef.current.play();
+            
+            if (playPromise !== undefined) {
+              playPromise.catch(err => {
+                console.error('Error playing audio:', err);
+                setIsPlaying(false);
+              });
+            }
+          }
+          
+          // Also update state for consistency
           setAudioUrl(selectedUrl);
         } else {
           console.error('No playable URL found for this song');
           setAudioUrl(null);
+          setIsPlaying(false);
         }
       } else {
         console.error('Failed to get song details');
         setAudioUrl(null);
+        setIsPlaying(false);
       }
     } catch (error) {
       console.error('Error fetching song details:', error);
       setAudioUrl(null);
+      setIsPlaying(false);
     }
   };
   
+  // Modified effect to handle audioUrl changes more carefully
+  useEffect(() => {
+    if (audioUrl && audioRef.current && isPlaying) {
+      // Only set source if it has changed
+      if (audioRef.current.src !== audioUrl) {
+        audioRef.current.src = audioUrl;
+      }
+      
+      // Always attempt to play when this effect runs
+      const playPromise = audioRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.error('Error playing audio:', err);
+          setIsPlaying(false);
+        });
+      }
+    }
+  }, [audioUrl, isPlaying]);
+
   // Function to play the next song in queue
   const playNextSong = () => {
     if (songQueue.length === 0 || currentQueueIndex === -1) return;
     
     const nextIndex = (currentQueueIndex + 1) % songQueue.length;
     setCurrentQueueIndex(nextIndex);
+    setIsPlaying(true); // Set to playing state immediately
     loadAndPlaySong(songQueue[nextIndex]);
   };
   
@@ -226,21 +272,9 @@ function App() {
     }
   }, [isPlaying, audioUrl]);
 
-  // Effect to set up audio element when URL changes
-  useEffect(() => {
-    if (audioUrl && audioRef.current) {
-      audioRef.current.src = audioUrl;
-      audioRef.current.play().catch(err => {
-        console.error('Error playing audio:', err);
-        setIsPlaying(false);
-      });
-    }
-  }, [audioUrl]);
-
   // Handle track ending - play next song
   const handleTrackEnded = () => {
-    setIsPlaying(false);
-    playNextSong();
+    playNextSong(); // Don't set isPlaying to false here, let the next song start playing
   };
 
   // Handle pressing Enter key in search field
@@ -342,6 +376,42 @@ function App() {
     setSelectedDetail(null);
     setDetailType(null);
     setDetailSongs([]);
+  };
+
+  // New function to format time (converts seconds to mm:ss format)
+  const formatTime = (timeInSeconds) => {
+    if (isNaN(timeInSeconds)) return '0:00';
+    
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+  
+  // New function to handle time update from audio player
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+  
+  // New function to handle duration change
+  const handleDurationChange = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+  
+  // New function to handle seeking when clicking on progress bar
+  const handleProgressBarClick = (e) => {
+    if (!audioRef.current || !progressBarRef.current) return;
+    
+    const progressBar = progressBarRef.current;
+    const rect = progressBar.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / progressBar.offsetWidth;
+    
+    // Set the current time based on click position (percentage of duration)
+    audioRef.current.currentTime = pos * audioRef.current.duration;
   };
 
   return (
@@ -554,6 +624,25 @@ function App() {
       {/* Audio Player (bottom of page) */}
       {currentlyPlaying && (
         <div className="audio-player">
+          {/* Progress bar */}
+          <div 
+            className="progress-container" 
+            ref={progressBarRef}
+            onClick={handleProgressBarClick}
+          >
+            <div className="progress-bar-bg"></div>
+            <div 
+              className="progress-bar" 
+              style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+            >
+              <div className="progress-bar-knob"></div>
+            </div>
+            <div className="time-display">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          </div>
+          
           <div className="now-playing">
             <img 
               src={currentlyPlaying.image?.[0]?.url} 
@@ -604,10 +693,12 @@ function App() {
         </div>
       )}
 
-      {/* Hidden audio element - updated to handle track ending */}
+      {/* Hidden audio element - with added event listeners */}
       <audio 
         ref={audioRef} 
         onEnded={handleTrackEnded}
+        onTimeUpdate={handleTimeUpdate}
+        onDurationChange={handleDurationChange}
       />
     </div>
   );
