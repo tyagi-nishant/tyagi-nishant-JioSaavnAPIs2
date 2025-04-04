@@ -676,25 +676,14 @@ function App() {
               <button className="player-control" onClick={playNextSong}>
                 ⏭
               </button>
+              <button 
+                className={`player-control ${showQueue ? 'active' : ''}`}
+                onClick={() => setShowQueue(!showQueue)}
+                title="Show/hide queue"
+              >
+                ♫
+              </button>
             </div>
-            
-            {/* Queue toggle button */}
-            <button 
-              className={`queue-toggle ${showQueue ? 'active' : ''}`}
-              onClick={() => setShowQueue(!showQueue)}
-              title="Show/hide queue"
-            >
-              <span className="queue-icon">🎵</span>
-            </button>
-            
-            {/* Queue toggle button with matching style */}
-            <button 
-              className={`player-control ${showQueue ? 'active' : ''}`}
-              onClick={() => setShowQueue(!showQueue)}
-              title="Show/hide queue"
-            >
-              ♫
-            </button>
             
             {/* Next up display */}
             {songQueue.length > 0 && currentQueueIndex !== -1 && currentQueueIndex < songQueue.length - 1 && (
