@@ -33,7 +33,12 @@ function App() {
 
   // Function to fetch next page of songs and append to queue
   const fetchAndAppendSimilarSongs = async () => {
-    if (!originalQuery || isLoadingMoreSongs) return;
+    console.log(`📋 fetchAndAppendSimilarSongs called, originalQuery: "${originalQuery}", isLoadingMoreSongs: ${isLoadingMoreSongs}`);
+    
+    if (!originalQuery || isLoadingMoreSongs) {
+      console.log("⚠️ Cannot fetch more songs: originalQuery is empty or already loading");
+      return false;
+    }
     
     try {
       setIsLoadingMoreSongs(true);
@@ -42,7 +47,8 @@ function App() {
       const nextPage = currentPage + 1;
       setCurrentAutoSearchTerm(`${originalQuery} (page ${nextPage})`);
       
-      console.log(`Extending queue: Fetching page ${nextPage} for "${originalQuery}"`);
+      console.log(`🔄 Extending queue: Fetching page ${nextPage} for "${originalQuery}"`);
+      console.log(`📊 Current queue length before fetch: ${songQueue.length}`);
       
       // Display the loading indicator for at least 1 second to ensure user sees it
       const fetchStartTime = Date.now();
@@ -50,12 +56,16 @@ function App() {
       const baseUrl = 'https://jio-saavn2.vercel.app/';
       
       // Make the search request for songs with pagination
-      const response = await fetch(`${baseUrl}api/search/songs?query=${encodeURIComponent(originalQuery)}&page=${nextPage}`);
+      const url = `${baseUrl}api/search/songs?query=${encodeURIComponent(originalQuery)}&page=${nextPage}`;
+      console.log(`🌐 Fetching from URL: ${url}`);
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
+      console.log(`✅ API response received, success: ${data.success}`);
       
       let songsAdded = false;
       
@@ -64,29 +74,38 @@ function App() {
         
         // Since we're paginating the same search, we'll add all songs from next page
         // even if they have the same IDs (the API might return duplicates across pages)
-        console.log(`Found ${newSongs.length} songs on page ${nextPage}`);
+        console.log(`✅ Found ${newSongs.length} songs on page ${nextPage}`);
         
         // Add all songs from the new page
-        setSongQueue(prevQueue => [...prevQueue, ...newSongs]);
-        console.log(`Added ${newSongs.length} songs from page ${nextPage} to the queue`);
+        setSongQueue(prevQueue => {
+          const updatedQueue = [...prevQueue, ...newSongs];
+          console.log(`📊 Updated queue length: ${updatedQueue.length} (added ${newSongs.length} songs)`);
+          return updatedQueue;
+        });
+        
+        console.log(`✅ Added ${newSongs.length} songs from page ${nextPage} to the queue`);
         songsAdded = true;
         
         // Update the current page
         setCurrentPage(nextPage);
+        console.log(`📄 Current page updated to ${nextPage}`);
       } else {
-        console.log(`No results found on page ${nextPage} for "${originalQuery}"`);
+        console.log(`⚠️ No results found on page ${nextPage} for "${originalQuery}"`);
       }
       
       // Ensure loading indicator displays for at least 1 second
       const fetchEndTime = Date.now();
       const fetchDuration = fetchEndTime - fetchStartTime;
       if (fetchDuration < 1000) {
-        await new Promise(resolve => setTimeout(resolve, 1000 - fetchDuration));
+        const waitTime = 1000 - fetchDuration;
+        console.log(`⏱️ Waiting ${waitTime}ms to ensure loading indicator is visible`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
       
+      console.log(`📋 fetchAndAppendSimilarSongs completed, songsAdded: ${songsAdded}`);
       return songsAdded; // Return whether songs were added
     } catch (error) {
-      console.error('Error fetching next page of songs:', error);
+      console.error('🐞 Error fetching next page of songs:', error);
       return false;
     } finally {
       setIsLoadingMoreSongs(false);
@@ -231,12 +250,15 @@ function App() {
   
   // Function to load and play a song
   const loadAndPlaySong = async (song) => {
+    console.log(`🎵 Loading song: "${song.name}" (ID: ${song.id})`);
     try {
       setCurrentlyPlaying(song);
       setIsPlaying(true); // Set to playing state
+      console.log("⏳ Set isPlaying to true");
       
       // First, we need to get detailed song info which includes the download URLs
       const baseUrl = 'https://jio-saavn2.vercel.app/';
+      console.log(`🔄 Fetching song details from API for ID: ${song.id}`);
       const response = await fetch(`${baseUrl}api/songs?ids=${song.id}`);
       
       if (!response.ok) {
@@ -244,6 +266,7 @@ function App() {
       }
       
       const data = await response.json();
+      console.log(`✅ Song details received from API, success: ${data.success}`);
       
       if (data.success && data.data && data.data.length > 0) {
         const songDetails = data.data[0];
@@ -256,41 +279,59 @@ function App() {
           const found = songDetails.downloadUrl.find(link => link.quality === quality);
           if (found && found.url) {
             selectedUrl = found.url;
+            console.log(`✅ Found audio URL with quality: ${quality}`);
             break;
           }
         }
         
         if (selectedUrl) {
+          console.log(`🔊 Setting audio source to ${selectedUrl.substring(0, 50)}...`);
           // Update the audio directly to ensure immediate playback
           if (audioRef.current) {
             // Directly set audio properties
             audioRef.current.src = selectedUrl;
             
-            // Force play after source is set
-            const playPromise = audioRef.current.play();
-            
-            if (playPromise !== undefined) {
-              playPromise.catch(err => {
-                console.error('Error playing audio:', err);
-                setIsPlaying(false);
-              });
-            }
+            // Force play after source is set with a small delay to ensure it works after loading
+            console.log("⏱️ Setting timeout to play audio after 100ms");
+            setTimeout(() => {
+              if (audioRef.current) {
+                console.log("▶️ Attempting to play audio...");
+                const playPromise = audioRef.current.play();
+                
+                if (playPromise !== undefined) {
+                  playPromise.catch(err => {
+                    console.error('❌ Error playing audio:', err);
+                    // Try once more after a short delay
+                    console.log("⏱️ First play attempt failed, retrying after 300ms");
+                    setTimeout(() => {
+                      if (audioRef.current) {
+                        console.log("▶️ Second attempt to play audio...");
+                        audioRef.current.play().catch(e => {
+                          console.error('❌ Second attempt to play failed:', e);
+                          setIsPlaying(false);
+                        });
+                      }
+                    }, 300);
+                  });
+                }
+              }
+            }, 100);
           }
           
           // Also update state for consistency
           setAudioUrl(selectedUrl);
         } else {
-          console.error('No playable URL found for this song');
+          console.error('❌ No playable URL found for this song');
           setAudioUrl(null);
           setIsPlaying(false);
         }
       } else {
-        console.error('Failed to get song details');
+        console.error('❌ Failed to get song details');
         setAudioUrl(null);
         setIsPlaying(false);
       }
     } catch (error) {
-      console.error('Error fetching song details:', error);
+      console.error('🐞 Error fetching song details:', error);
       setAudioUrl(null);
       setIsPlaying(false);
     }
@@ -377,9 +418,120 @@ function App() {
 
   // Handle track ending - play next song
   const handleTrackEnded = () => {
-    // Use void to ignore the promise since we can't make this function async
-    // (it's used directly as an event handler)
-    void playNextSong();
+    console.log("🔄 Track ended event fired!");
+    console.log(`Current queue index: ${currentQueueIndex}, Queue length: ${songQueue.length}`);
+    
+    // We need special handling since we can't make this an async function directly
+    // First check if we're at the end of the queue
+    const nextIndex = currentQueueIndex + 1;
+    
+    if (nextIndex >= songQueue.length) {
+      console.log("📢 End of queue reached, fetching more songs...");
+      // Using a separate function to handle the async operations
+      handleEndOfQueueAutoplay();
+    } else {
+      console.log(`▶️ Playing next song in queue (index ${nextIndex})`);
+      setCurrentQueueIndex(nextIndex);
+      loadAndPlaySong(songQueue[nextIndex]);
+    }
+  };
+  
+  // Helper function to handle autoplay when reaching end of queue
+  const handleEndOfQueueAutoplay = async () => {
+    console.log("🔄 handleEndOfQueueAutoplay started");
+    try {
+      // Set a loading state to prevent multiple calls
+      setIsLoadingMoreSongs(true);
+      console.log("⏳ Loading state set to true");
+      
+      // Try to fetch more songs
+      console.log("🔍 Attempting to fetch more songs...");
+      
+      // Instead of using the return value, we'll directly modify the queue and track if we added songs
+      let newSongsAdded = false;
+      let nextSongToPlay = null;
+      
+      // Fetch and process new songs
+      if (originalQuery && !isLoadingMoreSongs) {
+        try {
+          // Instead of generating a similar search term, we'll use pagination
+          const nextPage = currentPage + 1;
+          setCurrentAutoSearchTerm(`${originalQuery} (page ${nextPage})`);
+          
+          console.log(`🔄 Extending queue: Fetching page ${nextPage} for "${originalQuery}"`);
+          console.log(`📊 Current queue index: ${currentQueueIndex}, Current queue length: ${songQueue.length}`);
+          
+          // Display the loading indicator for at least 1 second to ensure user sees it
+          const fetchStartTime = Date.now();
+          
+          const baseUrl = 'https://jio-saavn2.vercel.app/';
+          
+          // Make the search request for songs with pagination
+          const url = `${baseUrl}api/search/songs?query=${encodeURIComponent(originalQuery)}&page=${nextPage}`;
+          console.log(`🌐 Fetching from URL: ${url}`);
+          
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log(`✅ API response received, success: ${data.success}`);
+          
+          if (data.success && data.data && data.data.results && data.data.results.length > 0) {
+            const newSongs = data.data.results;
+            console.log(`✅ Found ${newSongs.length} songs on page ${nextPage}`);
+            
+            // Get the song that will be next
+            nextSongToPlay = newSongs[0];
+            newSongsAdded = true;
+            
+            // Update the queue and store the updated queue
+            setSongQueue(prevQueue => {
+              const updatedQueue = [...prevQueue, ...newSongs];
+              console.log(`📊 Updated queue length: ${updatedQueue.length} (added ${newSongs.length} songs)`);
+              return updatedQueue;
+            });
+            
+            // Update the current page
+            setCurrentPage(nextPage);
+            console.log(`📄 Current page updated to ${nextPage}`);
+          } else {
+            console.log(`⚠️ No results found on page ${nextPage} for "${originalQuery}"`);
+          }
+          
+          // Ensure loading indicator displays for at least 1 second
+          const fetchEndTime = Date.now();
+          const fetchDuration = fetchEndTime - fetchStartTime;
+          if (fetchDuration < 1000) {
+            const waitTime = 1000 - fetchDuration;
+            console.log(`⏱️ Waiting ${waitTime}ms to ensure loading indicator is visible`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+        } catch (error) {
+          console.error('🐞 Error fetching next page of songs:', error);
+        }
+      }
+      
+      // After all updates, decide what to do next
+      if (newSongsAdded && nextSongToPlay) {
+        console.log("🎵 Playing the first song from the newly added songs");
+        // Increment current queue index - the new song will be right after current index
+        const newNextIndex = currentQueueIndex + 1;
+        setCurrentQueueIndex(newNextIndex);
+        loadAndPlaySong(nextSongToPlay);
+      } else {
+        // No more songs were added, stop playback
+        console.log("⛔ No more songs could be added to the queue, stopping playback");
+        setIsPlaying(false);
+      }
+    } catch (error) {
+      console.error("🐞 Error handling end of queue autoplay:", error);
+      setIsPlaying(false);
+    } finally {
+      console.log("⏳ Loading state set to false");
+      setIsLoadingMoreSongs(false);
+    }
   };
 
   // Handle pressing Enter key in search field
