@@ -113,6 +113,22 @@ function App() {
   };
 
   const playSong = async (song, contextSongs = []) => {
+    // First check if this is a toggle action (clicking on the current song)
+    if (currentlyPlaying?.id === song.id) {
+      // Just toggle play/pause for the same song
+      setIsPlaying(!isPlaying);
+      if (audioRef.current) {
+        if (isPlaying) {
+          audioRef.current.pause();
+        } else {
+          audioRef.current.play();
+        }
+      }
+      return; // Exit early as we're just toggling play state
+    }
+    
+    // If we get here, we're playing a new song
+    
     // If contextSongs is provided, set them as the queue
     if (contextSongs && contextSongs.length > 0) {
       const songIndex = contextSongs.findIndex(s => s.id === song.id);
@@ -124,17 +140,6 @@ function App() {
         setSongQueue([song]);
         setCurrentQueueIndex(0);
       }
-    } else if (currentlyPlaying?.id === song.id) {
-      // Just toggle play/pause for the same song
-      setIsPlaying(!isPlaying);
-      if (audioRef.current) {
-        if (isPlaying) {
-          audioRef.current.pause();
-        } else {
-          audioRef.current.play();
-        }
-      }
-      return; // Exit early as we're just toggling play state
     } else {
       // Single song selected without context, make it a queue of one
       setSongQueue([song]);
