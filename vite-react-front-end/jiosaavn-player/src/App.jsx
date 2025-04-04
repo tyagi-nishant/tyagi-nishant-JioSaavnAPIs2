@@ -31,6 +31,12 @@ function App() {
   const [isLoadingMoreSongs, setIsLoadingMoreSongs] = useState(false);
   const [currentAutoSearchTerm, setCurrentAutoSearchTerm] = useState('');
 
+  // Utility function to ensure URLs use HTTPS
+  const ensureHttps = (url) => {
+    if (!url) return url;
+    return url.replace(/^http:\/\//i, 'https://');
+  };
+
   // Function to fetch next page of songs and append to queue
   const fetchAndAppendSimilarSongs = async () => {
     console.log(`📋 fetchAndAppendSimilarSongs called, originalQuery: "${originalQuery}", isLoadingMoreSongs: ${isLoadingMoreSongs}`);
@@ -278,7 +284,7 @@ function App() {
         for (const quality of qualities) {
           const found = songDetails.downloadUrl.find(link => link.quality === quality);
           if (found && found.url) {
-            selectedUrl = found.url;
+            selectedUrl = ensureHttps(found.url); // Ensure HTTPS URL
             console.log(`✅ Found audio URL with quality: ${quality}`);
             break;
           }
@@ -687,7 +693,7 @@ function App() {
     <div className="music-app">
       {/* Header with Search */}
       <header className="app-header">
-        <h1>JioSaavn Music Player</h1>
+        <h1>Solace Music Player</h1>
         <div className="search-container">
           <input
             type="text"
@@ -724,7 +730,7 @@ function App() {
               </button>
               <div className="detail-info">
                 <img 
-                  src={selectedDetail.image?.[2]?.url || selectedDetail.image?.[1]?.url || selectedDetail.image?.[0]?.url} 
+                  src={ensureHttps(selectedDetail.image?.[2]?.url || selectedDetail.image?.[1]?.url || selectedDetail.image?.[0]?.url)} 
                   alt={selectedDetail.name || selectedDetail.title} 
                   className="detail-image"
                 />
@@ -747,7 +753,7 @@ function App() {
                       <div className="song-info">
                         <span className="song-number">{index + 1}</span>
                         <img 
-                          src={song.image?.[0]?.url} 
+                          src={ensureHttps(song.image?.[0]?.url)} 
                           alt={song.name} 
                           className="song-thumbnail"
                         />
@@ -784,7 +790,7 @@ function App() {
                     <div className="music-card" key={song.id}>
                       <div className="card-image">
                         <img 
-                          src={song.image?.[2]?.url || song.image?.[1]?.url || song.image?.[0]?.url} 
+                          src={ensureHttps(song.image?.[2]?.url || song.image?.[1]?.url || song.image?.[0]?.url)} 
                           alt={song.name} 
                         />
                         <button 
@@ -813,7 +819,7 @@ function App() {
                     <div className="music-card clickable" key={album.id} onClick={() => viewAlbum(album)}>
                       <div className="card-image">
                         <img 
-                          src={album.image?.[2]?.url || album.image?.[1]?.url || album.image?.[0]?.url} 
+                          src={ensureHttps(album.image?.[2]?.url || album.image?.[1]?.url || album.image?.[0]?.url)} 
                           alt={album.name} 
                         />
                       </div>
@@ -836,7 +842,7 @@ function App() {
                     <div className="music-card clickable" key={artist.id} onClick={() => viewArtist(artist)}>
                       <div className="card-image">
                         <img 
-                          src={artist.image?.[2]?.url || artist.image?.[1]?.url || artist.image?.[0]?.url} 
+                          src={ensureHttps(artist.image?.[2]?.url || artist.image?.[1]?.url || artist.image?.[0]?.url)} 
                           alt={artist.name} 
                         />
                       </div>
@@ -858,7 +864,7 @@ function App() {
                     <div className="music-card clickable" key={playlist.id} onClick={() => viewPlaylist(playlist)}>
                       <div className="card-image">
                         <img 
-                          src={playlist.image?.[2]?.url || playlist.image?.[1]?.url || playlist.image?.[0]?.url} 
+                          src={ensureHttps(playlist.image?.[2]?.url || playlist.image?.[1]?.url || playlist.image?.[0]?.url)} 
                           alt={playlist.name} 
                         />
                       </div>
@@ -884,7 +890,7 @@ function App() {
         {/* Welcome Screen (when no search has been performed) */}
         {!searchQuery && !searchResults && !selectedDetail && (
           <div className="welcome-screen">
-            <h2>Welcome to JioSaavn Music Player</h2>
+            <h2>Experience unlimited high quality music streaming</h2>
             <p>Search for your favorite songs, artists, albums, or playlists using the search bar above.</p>
           </div>
         )}
@@ -914,7 +920,7 @@ function App() {
           
           <div className="now-playing">
             <img 
-              src={currentlyPlaying.image?.[0]?.url} 
+              src={ensureHttps(currentlyPlaying.image?.[0]?.url)} 
               alt={currentlyPlaying.name} 
               className="mini-thumbnail"
             />
@@ -952,7 +958,7 @@ function App() {
                 <div className="next-up-label">Next:</div>
                 <div className="next-up-song">
                   <img 
-                    src={songQueue[currentQueueIndex + 1].image?.[0]?.url} 
+                    src={ensureHttps(songQueue[currentQueueIndex + 1].image?.[0]?.url)} 
                     alt={songQueue[currentQueueIndex + 1].name} 
                     className="next-thumbnail"
                   />
@@ -991,7 +997,7 @@ function App() {
               >
                 <div className="queue-number">{index + 1}</div>
                 <img 
-                  src={song.image?.[0]?.url} 
+                  src={ensureHttps(song.image?.[0]?.url)} 
                   alt={song.name} 
                   className="queue-thumbnail"
                 />
