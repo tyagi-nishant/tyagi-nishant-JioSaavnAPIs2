@@ -23,54 +23,80 @@ function App() {
     setSearchResults(null); // Clear previous results and indicate loading (optional)
     try {
       const baseUrl = 'https://jio-saavn2.vercel.app/';
+      
+      // Make the global search request
       const response = await fetch(`${baseUrl}api/search?query=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       
-      // Now also fetch additional song results
-      const songsResponse = await fetch(`${baseUrl}api/search/songs?query=${encodeURIComponent(searchQuery)}&limit=20`);
-      if (!songsResponse.ok) {
-        // If the songs request fails, we'll still continue with the global results
-        console.error("Error fetching additional songs:", songsResponse.status);
-        if (data.success) {
-          setSearchResults(data.data);
-        } else {
-          console.error("Search failed:", data.message);
-          setSearchResults({ error: data.message || 'Search failed' }); // Store error state
-        }
+      if (!data.success) {
+        console.error("Search failed:", data.message);
+        setSearchResults({ error: data.message || 'Search failed' });
         return;
       }
       
-      const songsData = await songsResponse.json();
+      // Create a merged result set starting with the global search results
+      const mergedResults = { ...data.data };
       
-      if (data.success) {
-        // Create a merged result set
-        const mergedResults = { ...data.data };
+      // Array of additional search requests to make
+      const additionalSearches = [
+        {
+          type: 'songs',
+          url: `${baseUrl}api/search/songs?query=${encodeURIComponent(searchQuery)}&limit=20`
+        },
+        {
+          type: 'albums',
+          url: `${baseUrl}api/search/albums?query=${encodeURIComponent(searchQuery)}&limit=20`
+        },
+        {
+          type: 'artists',
+          url: `${baseUrl}api/search/artists?query=${encodeURIComponent(searchQuery)}&limit=20`
+        },
+        {
+          type: 'playlists',
+          url: `${baseUrl}api/search/playlists?query=${encodeURIComponent(searchQuery)}&limit=20`
+        }
+      ];
+      
+      // Make all additional search requests in parallel
+      const additionalSearchPromises = additionalSearches.map(search => 
+        fetch(search.url)
+          .then(res => res.ok ? res.json() : null)
+          .catch(err => {
+            console.error(`Error fetching additional ${search.type}:`, err);
+            return null; // Return null on error so Promise.all doesn't fail
+          })
+      );
+      
+      // Wait for all additional searches to complete
+      const additionalResults = await Promise.all(additionalSearchPromises);
+      
+      // Process each set of additional results
+      additionalSearches.forEach((search, index) => {
+        const result = additionalResults[index];
         
-        // If both responses have song results, merge them while avoiding duplicates
-        if (songsData.success && songsData.data && songsData.data.results && mergedResults.songs) {
-          // Create a Set of existing song IDs for fast lookup
-          const existingIds = new Set(mergedResults.songs.results.map(song => song.id));
+        if (result && result.success && result.data && result.data.results && 
+            mergedResults[search.type] && mergedResults[search.type].results) {
           
-          // Filter out duplicates and add new songs
-          const additionalSongs = songsData.data.results.filter(song => !existingIds.has(song.id));
+          // Create a Set of existing IDs for fast lookup
+          const existingIds = new Set(mergedResults[search.type].results.map(item => item.id));
           
-          // Append additional songs to the results
-          if (additionalSongs.length > 0) {
-            mergedResults.songs = {
-              ...mergedResults.songs,
-              results: [...mergedResults.songs.results, ...additionalSongs]
+          // Filter out duplicates and add new items
+          const additionalItems = result.data.results.filter(item => !existingIds.has(item.id));
+          
+          // Append additional items to the results
+          if (additionalItems.length > 0) {
+            mergedResults[search.type] = {
+              ...mergedResults[search.type],
+              results: [...mergedResults[search.type].results, ...additionalItems]
             };
           }
         }
-        
-        setSearchResults(mergedResults);
-      } else {
-        console.error("Search failed:", data.message);
-        setSearchResults({ error: data.message || 'Search failed' }); // Store error state
-      }
+      });
+      
+      setSearchResults(mergedResults);
     } catch (error) {
       console.error('Error fetching search results:', error);
       setSearchResults({ error: error.message || 'An error occurred' }); // Store error state
@@ -399,7 +425,7 @@ function App() {
                       </div>
                       <div className="card-info">
                         <h3>{album.name}</h3>
-                        <p>{album.artists?.map(a => a.name).join(', ')}</p>
+                        <p>{album.artists?.primary?.map(a => a.name).join(', ') || album.artists?.all?.map(a => a.name).join(', ') || ''}</p>
                       </div>
                     </div>
                   ))}
