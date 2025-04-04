@@ -14,6 +14,10 @@ function App() {
   const [detailType, setDetailType] = useState(null);
   const [detailSongs, setDetailSongs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // New state variables for queue management
+  const [songQueue, setSongQueue] = useState([]);
+  const [currentQueueIndex, setCurrentQueueIndex] = useState(-1);
 
   const handleSearch = async () => {
     if (!searchQuery) {
@@ -103,10 +107,20 @@ function App() {
     }
   };
 
-  const playSong = async (song) => {
-    // If user clicks on the same song that's already selected
-    if (currentlyPlaying?.id === song.id) {
-      // Just toggle play/pause
+  const playSong = async (song, contextSongs = []) => {
+    // If contextSongs is provided, set them as the queue
+    if (contextSongs && contextSongs.length > 0) {
+      const songIndex = contextSongs.findIndex(s => s.id === song.id);
+      if (songIndex !== -1) {
+        setSongQueue(contextSongs);
+        setCurrentQueueIndex(songIndex);
+      } else {
+        // If the song isn't in the context songs (shouldn't happen normally)
+        setSongQueue([song]);
+        setCurrentQueueIndex(0);
+      }
+    } else if (currentlyPlaying?.id === song.id) {
+      // Just toggle play/pause for the same song
       setIsPlaying(!isPlaying);
       if (audioRef.current) {
         if (isPlaying) {
@@ -115,52 +129,87 @@ function App() {
           audioRef.current.play();
         }
       }
+      return; // Exit early as we're just toggling play state
     } else {
-      // Otherwise, let's fetch the song details to get the audio URL
-      setCurrentlyPlaying(song);
-      setIsPlaying(true);
+      // Single song selected without context, make it a queue of one
+      setSongQueue([song]);
+      setCurrentQueueIndex(0);
+    }
+    
+    // Play the selected song
+    loadAndPlaySong(song);
+  };
+  
+  // New function to load and play a song
+  const loadAndPlaySong = async (song) => {
+    setCurrentlyPlaying(song);
+    setIsPlaying(true);
+    
+    try {
+      // First, we need to get detailed song info which includes the download URLs
+      const baseUrl = 'https://jio-saavn2.vercel.app/';
+      const response = await fetch(`${baseUrl}api/songs?ids=${song.id}`);
       
-      try {
-        // First, we need to get detailed song info which includes the download URLs
-        const baseUrl = 'https://jio-saavn2.vercel.app/';
-        const response = await fetch(`${baseUrl}api/songs?ids=${song.id}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data && data.data.length > 0) {
+        const songDetails = data.data[0];
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        // Find the best quality URL available
+        const qualities = ['320kbps', '160kbps', '96kbps', '48kbps', '12kbps'];
+        let selectedUrl = null;
+        
+        for (const quality of qualities) {
+          const found = songDetails.downloadUrl.find(link => link.quality === quality);
+          if (found && found.url) {
+            selectedUrl = found.url;
+            break;
+          }
         }
         
-        const data = await response.json();
-        
-        if (data.success && data.data && data.data.length > 0) {
-          const songDetails = data.data[0];
-          
-          // Find the best quality URL available
-          const qualities = ['320kbps', '160kbps', '96kbps', '48kbps', '12kbps'];
-          let selectedUrl = null;
-          
-          for (const quality of qualities) {
-            const found = songDetails.downloadUrl.find(link => link.quality === quality);
-            if (found && found.url) {
-              selectedUrl = found.url;
-              break;
-            }
-          }
-          
-          if (selectedUrl) {
-            setAudioUrl(selectedUrl);
-          } else {
-            console.error('No playable URL found for this song');
-            setAudioUrl(null);
-          }
+        if (selectedUrl) {
+          setAudioUrl(selectedUrl);
         } else {
-          console.error('Failed to get song details');
+          console.error('No playable URL found for this song');
           setAudioUrl(null);
         }
-      } catch (error) {
-        console.error('Error fetching song details:', error);
+      } else {
+        console.error('Failed to get song details');
         setAudioUrl(null);
       }
+    } catch (error) {
+      console.error('Error fetching song details:', error);
+      setAudioUrl(null);
     }
+  };
+  
+  // Function to play the next song in queue
+  const playNextSong = () => {
+    if (songQueue.length === 0 || currentQueueIndex === -1) return;
+    
+    const nextIndex = (currentQueueIndex + 1) % songQueue.length;
+    setCurrentQueueIndex(nextIndex);
+    loadAndPlaySong(songQueue[nextIndex]);
+  };
+  
+  // Function to play the previous song in queue
+  const playPreviousSong = () => {
+    if (songQueue.length === 0 || currentQueueIndex === -1) return;
+    
+    // If we're less than 3 seconds into the song, go to previous song
+    // Otherwise restart the current song
+    if (audioRef.current && audioRef.current.currentTime > 3) {
+      audioRef.current.currentTime = 0;
+      return;
+    }
+    
+    const prevIndex = (currentQueueIndex - 1 + songQueue.length) % songQueue.length;
+    setCurrentQueueIndex(prevIndex);
+    loadAndPlaySong(songQueue[prevIndex]);
   };
 
   // Effect to handle audio element play/pause based on isPlaying state
@@ -187,6 +236,12 @@ function App() {
       });
     }
   }, [audioUrl]);
+
+  // Handle track ending - play next song
+  const handleTrackEnded = () => {
+    setIsPlaying(false);
+    playNextSong();
+  };
 
   // Handle pressing Enter key in search field
   const handleKeyPress = (e) => {
@@ -364,7 +419,7 @@ function App() {
                       </div>
                       <button 
                         className={`song-play ${currentlyPlaying?.id === song.id ? (isPlaying ? 'playing' : 'paused') : ''}`}
-                        onClick={() => playSong(song)}
+                        onClick={() => playSong(song, detailSongs)}
                       >
                         {currentlyPlaying?.id === song.id && isPlaying ? '❚❚' : '▶'}
                       </button>
@@ -395,7 +450,7 @@ function App() {
                         />
                         <button 
                           className={`play-button ${currentlyPlaying?.id === song.id ? (isPlaying ? 'playing' : 'paused') : ''}`}
-                          onClick={() => playSong(song)}
+                          onClick={() => playSong(song, searchResults.songs.results)}
                         >
                           {currentlyPlaying?.id === song.id && isPlaying ? '❚❚' : '▶'}
                         </button>
@@ -511,18 +566,49 @@ function App() {
                 {currentlyPlaying.artists?.primary?.map(a => a.name).join(', ')}
               </div>
             </div>
-            <button 
-              className={`player-control ${isPlaying ? 'playing' : 'paused'}`}
-              onClick={() => setIsPlaying(!isPlaying)}
-            >
-              {isPlaying ? '❚❚' : '▶'}
-            </button>
+            <div className="player-controls">
+              <button className="player-control" onClick={playPreviousSong}>
+                ⏮
+              </button>
+              <button 
+                className={`player-control ${isPlaying ? 'playing' : 'paused'}`}
+                onClick={() => setIsPlaying(!isPlaying)}
+              >
+                {isPlaying ? '❚❚' : '▶'}
+              </button>
+              <button className="player-control" onClick={playNextSong}>
+                ⏭
+              </button>
+            </div>
+            
+            {/* Next up display */}
+            {songQueue.length > 0 && currentQueueIndex !== -1 && currentQueueIndex < songQueue.length - 1 && (
+              <div className="next-up">
+                <div className="next-up-label">Next:</div>
+                <div className="next-up-song">
+                  <img 
+                    src={songQueue[currentQueueIndex + 1].image?.[0]?.url} 
+                    alt={songQueue[currentQueueIndex + 1].name} 
+                    className="next-thumbnail"
+                  />
+                  <div className="next-song-info">
+                    <div className="next-song-name">{songQueue[currentQueueIndex + 1].name}</div>
+                    <div className="next-song-artist">
+                      {songQueue[currentQueueIndex + 1].artists?.primary?.map(a => a.name).join(', ')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Hidden audio element */}
-      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} />
+      {/* Hidden audio element - updated to handle track ending */}
+      <audio 
+        ref={audioRef} 
+        onEnded={handleTrackEnded}
+      />
     </div>
   );
 }
