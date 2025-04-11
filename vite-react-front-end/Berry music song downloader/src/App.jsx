@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+import { AuthProvider, useAuth } from './AuthContext.jsx'
+import { Navbar } from './components/Navigation/Navbar'
+import { Login } from './components/Auth/Login'
+import { SubscriptionPlans } from './components/Subscription/SubscriptionPlans'
+import { DownloadButton } from './components/Download/DownloadButton'
 import './App.css'
 
-function App() {
+function BerryMusicApp() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
@@ -27,9 +32,19 @@ function App() {
   const progressBarRef = useRef(null);
   
   // State for showing queue sidebar
-  const [showQueue, setShowQueue] = useState(true);
+  const [showQueue, setShowQueue] = useState(window.innerWidth > 768); // Hide queue by default on mobile
   const [isLoadingMoreSongs, setIsLoadingMoreSongs] = useState(false);
   const [currentAutoSearchTerm, setCurrentAutoSearchTerm] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+
+  // Auth context data
+  const { user, hasPremiumAccess } = useAuth();
+
+  // Add debug logging
+  useEffect(() => {
+    console.log("Auth state in App:", { user, hasPremiumAccess });
+  }, [user, hasPremiumAccess]);
 
   // Utility function to ensure URLs use HTTPS
   const ensureHttps = (url) => {
@@ -204,9 +219,16 @@ function App() {
       });
       
       setSearchResults(mergedResults);
+      
+      // Automatically populate the queue with songs on search
+      if (mergedResults.songs && mergedResults.songs.results && mergedResults.songs.results.length > 0) {
+        setSongQueue(mergedResults.songs.results);
+        setCurrentQueueIndex(-1); // Reset current queue position
+      }
+      
     } catch (error) {
-      console.error('Error fetching search results:', error);
-      setSearchResults({ error: error.message || 'An error occurred' }); // Store error state
+      console.error("Search error:", error);
+      setSearchResults({ error: error.message || 'An error occurred during search' });
     }
   };
 
@@ -689,351 +711,389 @@ function App() {
     audioRef.current.currentTime = pos * audioRef.current.duration;
   };
 
-  return (
-    <div className="music-app">
-      {/* Header with Search */}
-      <header className="app-header">
-        <h1>Solace Music Player</h1>
-        <div className="search-container">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Search for songs, artists, playlists..."
-            className="search-input"
-          />
-          <button onClick={handleSearch} className="search-button">Search</button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="main-content">
-        {/* Loading Indicator */}
-        {(searchQuery && !searchResults) || isLoading ? (
-          <div className="loading">Searching...</div>
-        ) : null}
-
-        {/* Error Message */}
-        {searchResults?.error && (
-          <div className="error-message">
-            <p>Error: {searchResults.error}</p>
+  // Render handlers for our modals
+  const renderLoginModal = () => {
+    if (showLoginModal) {
+      return (
+        <div className="modal-overlay">
+          <div className="auth-container">
+            <Login onClose={() => setShowLoginModal(false)} />
           </div>
-        )}
+        </div>
+      );
+    }
+    return null;
+  };
+  
+  const renderSubscriptionModal = () => {
+    if (!showSubscriptionModal) return null;
+    
+    return (
+      <div className="modal-overlay" onClick={() => setShowSubscriptionModal(false)}>
+        <div className="modal-content subscription-modal" onClick={e => e.stopPropagation()}>
+          <button className="modal-close" onClick={() => setShowSubscriptionModal(false)}>×</button>
+          <SubscriptionPlans />
+        </div>
+      </div>
+    );
+  };
 
-        {/* Detail View - Albums, Artists, Playlists */}
-        {selectedDetail && (
-          <div className="detail-view">
-            <div className="detail-header">
-              <button onClick={goBackToSearch} className="back-button">
-                &larr; Back to Search
-              </button>
+  // Render modified song item to include download button
+  const renderSongItem = (song, index, inQueue = false) => {
+    const isCurrentSong = currentlyPlaying && currentlyPlaying.id === song.id;
+    
+    return (
+      <div 
+        key={`${song.id}-${index}`} 
+        className={`song-item ${isCurrentSong ? 'current' : ''}`}
+      >
+        <div className="song-number">{index + 1}</div>
+        <div className="song-thumbnail">
+          <img src={ensureHttps(song.image)} alt={song.name} />
+        </div>
+        <div className="song-info">
+          <div className="song-title">{song.name}</div>
+          <div className="song-artist">{song.primaryArtists || song.artist || 'Unknown Artist'}</div>
+          
+          {/* Add download button for premium users */}
+          {!inQueue && <DownloadButton song={song} />}
+        </div>
+        <button 
+          className={`song-play ${isCurrentSong && isPlaying ? 'playing' : ''}`}
+          onClick={() => {
+            if (inQueue) {
+              setCurrentQueueIndex(index);
+              playSong(song, songQueue);
+            } else {
+              playSong(song, detailSongs);
+            }
+          }}
+        >
+          {isCurrentSong && isPlaying ? '❚❚' : '▶'}
+        </button>
+      </div>
+    );
+  };
+
+  // Add welcome screen with renaissance painting
+  const renderWelcomeScreen = () => {
+    return (
+      <div className="welcome-screen">
+        <div className="renaissance-artwork">
+          {/* <div className="background-image"></div> */}
+          <div className="welcome-text">
+            <h2>Welcome to Berry Music Downloader</h2>
+            <p>Search for your favorite songs, artists, albums, and playlists</p>
+          </div>
+        </div>
+        
+        <div className="features-section">
+          <div className="feature-card">
+            <div className="feature-icon">🎵</div>
+            <h3>Unlimited Music</h3>
+            <p>Access millions of songs from around the world</p>
+          </div>
+          
+          <div className="feature-card">
+            <div className="feature-icon">⬇️</div>
+            <h3>Download Music</h3>
+            <p>Premium members can download songs for offline listening</p>
+          </div>
+          
+          <div className="feature-card">
+            <div className="feature-icon">🎧</div>
+            <h3>High Quality</h3>
+            <p>Enjoy high-quality streaming with no interruptions</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Finally, render the complete app
+  return (
+    <div className="music-app dark-theme">
+      <Navbar 
+        showLoginModal={() => {
+          console.log("Opening login modal");
+          setShowLoginModal(true);
+        }} 
+        showSubscriptionModal={() => {
+          console.log("Opening subscription modal");
+          setShowSubscriptionModal(true);
+        }} 
+      />
+      
+      {/* Conditionally render the header only if user is logged in */}
+      {user && (
+        <header className="app-header">
+          <div className="search-container">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search for songs, artists, albums, and playlists..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <button className="search-button" onClick={handleSearch}>
+              Search
+            </button>
+          </div>
+        </header>
+      )}
+      
+      <div className="main-container">
+        <div className={`main-content ${showQueue ? 'with-queue' : ''}`}>
+          {/* Detail view or search results */}
+          {selectedDetail ? (
+            <div className="detail-view">
+              <div className="detail-header">
+                <button className="back-button" onClick={goBackToSearch}>
+                  ← Back to Search
+                </button>
+              </div>
               <div className="detail-info">
-                <img 
-                  src={ensureHttps(selectedDetail.image?.[2]?.url || selectedDetail.image?.[1]?.url || selectedDetail.image?.[0]?.url)} 
-                  alt={selectedDetail.name || selectedDetail.title} 
-                  className="detail-image"
-                />
+                <div className="detail-image">
+                  <img src={ensureHttps(selectedDetail.image)} alt={selectedDetail.name || selectedDetail.title} />
+                </div>
                 <div>
+                  <div className="detail-type">{detailType}</div>
                   <h2>{selectedDetail.name || selectedDetail.title}</h2>
-                  <p className="detail-type">{detailType.charAt(0).toUpperCase() + detailType.slice(1)}</p>
-                  {detailType === 'album' && selectedDetail.artists && (
-                    <p className="detail-artists">By {selectedDetail.artists?.primary?.map(a => a.name).join(', ')}</p>
+                  {selectedDetail.primaryArtists && (
+                    <div className="detail-artists">{selectedDetail.primaryArtists}</div>
                   )}
                 </div>
               </div>
-            </div>
-            
-            <div className="detail-songs">
-              <h3>Songs</h3>
-              {detailSongs.length > 0 ? (
-                <div className="songs-list">
-                  {detailSongs.map((song, index) => (
-                    <div className="song-item" key={song.id || index}>
-                      <div className="song-info">
-                        <span className="song-number">{index + 1}</span>
-                        <img 
-                          src={ensureHttps(song.image?.[0]?.url)} 
-                          alt={song.name} 
-                          className="song-thumbnail"
-                        />
-                        <div>
-                          <div className="song-title">{song.name}</div>
-                          <div className="song-artist">{song.artists?.primary?.map(a => a.name).join(', ')}</div>
-                        </div>
-                      </div>
-                      <button 
-                        className={`song-play ${currentlyPlaying?.id === song.id ? (isPlaying ? 'playing' : 'paused') : ''}`}
-                        onClick={() => playSong(song, detailSongs)}
-                      >
-                        {currentlyPlaying?.id === song.id && isPlaying ? '❚❚' : '▶'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="no-songs">No songs found</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Search Results */}
-        {searchResults && !searchResults.error && !selectedDetail && (
-          <div className="search-results">
-            {/* Songs Section */}
-            {searchResults.songs?.results?.length > 0 && (
-              <section className="results-section">
-                <h2>Songs</h2>
-                <div className="cards-container">
-                  {searchResults.songs.results.map((song) => (
-                    <div className="music-card" key={song.id}>
-                      <div className="card-image">
-                        <img 
-                          src={ensureHttps(song.image?.[2]?.url || song.image?.[1]?.url || song.image?.[0]?.url)} 
-                          alt={song.name} 
-                        />
-                        <button 
-                          className={`play-button ${currentlyPlaying?.id === song.id ? (isPlaying ? 'playing' : 'paused') : ''}`}
-                          onClick={() => playSong(song, searchResults.songs.results)}
-                        >
-                          {currentlyPlaying?.id === song.id && isPlaying ? '❚❚' : '▶'}
-                        </button>
-                      </div>
-                      <div className="card-info">
-                        <h3>{song.name}</h3>
-                        <p>{song.artists?.primary?.map(a => a.name).join(', ')}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Albums Section */}
-            {searchResults.albums?.results?.length > 0 && (
-              <section className="results-section">
-                <h2>Albums</h2>
-                <div className="cards-container">
-                  {searchResults.albums.results.map((album) => (
-                    <div className="music-card clickable" key={album.id} onClick={() => viewAlbum(album)}>
-                      <div className="card-image">
-                        <img 
-                          src={ensureHttps(album.image?.[2]?.url || album.image?.[1]?.url || album.image?.[0]?.url)} 
-                          alt={album.name} 
-                        />
-                      </div>
-                      <div className="card-info">
-                        <h3>{album.name}</h3>
-                        <p>{album.artists?.primary?.map(a => a.name).join(', ') || album.artists?.all?.map(a => a.name).join(', ') || ''}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Artists Section */}
-            {searchResults.artists?.results?.length > 0 && (
-              <section className="results-section">
-                <h2>Artists</h2>
-                <div className="cards-container">
-                  {searchResults.artists.results.map((artist) => (
-                    <div className="music-card clickable" key={artist.id} onClick={() => viewArtist(artist)}>
-                      <div className="card-image">
-                        <img 
-                          src={ensureHttps(artist.image?.[2]?.url || artist.image?.[1]?.url || artist.image?.[0]?.url)} 
-                          alt={artist.name} 
-                        />
-                      </div>
-                      <div className="card-info">
-                        <h3>{artist.name}</h3>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Playlists Section */}
-            {searchResults.playlists?.results?.length > 0 && (
-              <section className="results-section">
-                <h2>Playlists</h2>
-                <div className="cards-container">
-                  {searchResults.playlists.results.map((playlist) => (
-                    <div className="music-card clickable" key={playlist.id} onClick={() => viewPlaylist(playlist)}>
-                      <div className="card-image">
-                        <img 
-                          src={ensureHttps(playlist.image?.[2]?.url || playlist.image?.[1]?.url || playlist.image?.[0]?.url)} 
-                          alt={playlist.name} 
-                        />
-                      </div>
-                      <div className="card-info">
-                        <h3>{playlist.name}</h3>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* No Results Message */}
-            {!searchResults.songs?.results?.length &&
-             !searchResults.albums?.results?.length &&
-             !searchResults.artists?.results?.length &&
-             !searchResults.playlists?.results?.length && (
-              <div className="no-results">No results found for "{searchQuery}"</div>
-            )}
-          </div>
-        )}
-
-        {/* Welcome Screen (when no search has been performed) */}
-        {!searchQuery && !searchResults && !selectedDetail && (
-          <div className="welcome-screen">
-            <h2>Experience unlimited high quality music streaming</h2>
-            <p>Search for your favorite songs, artists, albums, or playlists using the search bar above.</p>
-          </div>
-        )}
-      </main>
-
-      {/* Audio Player (bottom of page) */}
-      {currentlyPlaying && (
-        <div className="audio-player">
-          {/* Progress bar */}
-          <div 
-            className="progress-container" 
-            ref={progressBarRef}
-            onClick={handleProgressBarClick}
-          >
-            <div className="progress-bar-bg"></div>
-            <div 
-              className="progress-bar" 
-              style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
-            >
-              <div className="progress-bar-knob"></div>
-            </div>
-            <div className="time-display">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-          </div>
-          
-          <div className="now-playing">
-            <img 
-              src={ensureHttps(currentlyPlaying.image?.[0]?.url)} 
-              alt={currentlyPlaying.name} 
-              className="mini-thumbnail"
-            />
-            <div className="track-info">
-              <div className="track-name">{currentlyPlaying.name}</div>
-              <div className="track-artist">
-                {currentlyPlaying.artists?.primary?.map(a => a.name).join(', ')}
+              
+              <div className="detail-songs">
+                <h3>Songs</h3>
+                {detailSongs.length > 0 ? (
+                  <div className="songs-list">
+                    {detailSongs.map((song, index) => renderSongItem(song, index))}
+                  </div>
+                ) : (
+                  <div className="no-songs">No songs available</div>
+                )}
               </div>
             </div>
+          ) : (
+            <div className="search-results">
+              {isLoading ? (
+                <div className="loading">Searching...</div>
+              ) : searchResults ? (
+                searchResults.error ? (
+                  <div className="error-message">{searchResults.error}</div>
+                ) : (
+                  <div>
+                    {/* Songs Section */}
+                    {searchResults.songs && searchResults.songs.results && searchResults.songs.results.length > 0 && (
+                      <div className="results-section">
+                        <h2>Songs</h2>
+                        <div className="songs-list">
+                          {searchResults.songs.results.map((song, index) => renderSongItem(song, index))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Albums Section */}
+                    {searchResults.albums && searchResults.albums.results && searchResults.albums.results.length > 0 && (
+                      <div className="results-section">
+                        <h2>Albums</h2>
+                        <div className="cards-container">
+                          {searchResults.albums.results.map((album) => (
+                            <div 
+                              key={album.id} 
+                              className="music-card clickable"
+                              onClick={() => viewAlbum(album)}
+                            >
+                              <div className="card-image">
+                                <img src={ensureHttps(album.image)} alt={album.name} />
+                              </div>
+                              <div className="card-info">
+                                <h3>{album.name}</h3>
+                                <p>{album.primaryArtists || 'Various Artists'}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Artists Section */}
+                    {searchResults.artists && searchResults.artists.results && searchResults.artists.results.length > 0 && (
+                      <div className="results-section">
+                        <h2>Artists</h2>
+                        <div className="cards-container">
+                          {searchResults.artists.results.map((artist) => (
+                            <div 
+                              key={artist.id} 
+                              className="music-card clickable"
+                              onClick={() => viewArtist(artist)}
+                            >
+                              <div className="card-image">
+                                <img src={ensureHttps(artist.image)} alt={artist.name} />
+                              </div>
+                              <div className="card-info">
+                                <h3>{artist.name}</h3>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Playlists Section */}
+                    {searchResults.playlists && searchResults.playlists.results && searchResults.playlists.results.length > 0 && (
+                      <div className="results-section">
+                        <h2>Playlists</h2>
+                        <div className="cards-container">
+                          {searchResults.playlists.results.map((playlist) => (
+                            <div 
+                              key={playlist.id} 
+                              className="music-card clickable"
+                              onClick={() => viewPlaylist(playlist)}
+                            >
+                              <div className="card-image">
+                                <img src={ensureHttps(playlist.image)} alt={playlist.name} />
+                              </div>
+                              <div className="card-info">
+                                <h3>{playlist.name}</h3>
+                                <p>{playlist.songCount || 0} songs</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : (
+                renderWelcomeScreen()
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Queue Sidebar - Show only on larger screens or when toggled */}
+        {showQueue && (
+          <div className="queue-sidebar">
+            <div className="queue-header">
+              <h3>Queue</h3>
+              <button className="queue-close" onClick={() => setShowQueue(false)}>×</button>
+            </div>
+            {songQueue.length > 0 ? (
+              <div className="queue-list">
+                {songQueue.map((song, index) => renderSongItem(song, index, true))}
+                
+                {/* Loading indicator at the end of the queue */}
+                {isLoadingMoreSongs && (
+                  <div className="queue-loading-indicator">
+                    <div className="loading-spinner"></div>
+                    <p>Loading more songs...</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="no-songs">Queue is empty. Search for songs to add to the queue.</div>
+            )}
+          </div>
+        )}
+        
+        {/* Audio Player */}
+        {currentlyPlaying && (
+          <div className="audio-player">
+            <div className="progress-container" ref={progressBarRef} onClick={handleProgressBarClick}>
+              <div className="progress-bar-bg">
+                <div 
+                  className="progress-bar" 
+                  style={{ width: `${(currentTime / duration) * 100}%` }}
+                ></div>
+              </div>
+              <div className="time-display">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+            </div>
+            
+            <div className="now-playing">
+              <div className="mini-thumbnail">
+                <img src={ensureHttps(currentlyPlaying.image)} alt={currentlyPlaying.name} />
+              </div>
+              <div className="track-info">
+                <div className="track-name">{currentlyPlaying.name}</div>
+                <div className="track-artist">{currentlyPlaying.primaryArtists || currentlyPlaying.artist || 'Unknown Artist'}</div>
+              </div>
+            </div>
+            
             <div className="player-controls">
-              <button className="player-control" onClick={playPreviousSong}>
-                ⏮
-              </button>
+              <button className="player-control" onClick={playPreviousSong}>⏮</button>
               <button 
-                className={`player-control ${isPlaying ? 'playing' : 'paused'}`}
+                className={`player-control ${isPlaying ? 'playing' : ''}`} 
                 onClick={() => setIsPlaying(!isPlaying)}
               >
                 {isPlaying ? '❚❚' : '▶'}
               </button>
-              <button className="player-control" onClick={playNextSong}>
-                ⏭
-              </button>
-              <button 
-                className={`player-control ${showQueue ? 'active' : ''}`}
-                onClick={() => setShowQueue(!showQueue)}
-                title="Show/hide queue"
-              >
-                ♫
-              </button>
+              <button className="player-control" onClick={playNextSong}>⏭</button>
             </div>
             
-            {/* Next up display */}
-            {songQueue.length > 0 && currentQueueIndex !== -1 && currentQueueIndex < songQueue.length - 1 && (
-              <div className="next-up">
-                <div className="next-up-label">Next:</div>
+            <div className="next-up">
+              <div className="next-up-label">Next Up</div>
+              {currentQueueIndex < songQueue.length - 1 ? (
                 <div className="next-up-song">
-                  <img 
-                    src={ensureHttps(songQueue[currentQueueIndex + 1].image?.[0]?.url)} 
-                    alt={songQueue[currentQueueIndex + 1].name} 
-                    className="next-thumbnail"
-                  />
+                  <div className="next-thumbnail">
+                    <img src={ensureHttps(songQueue[currentQueueIndex + 1].image)} alt={songQueue[currentQueueIndex + 1].name} />
+                  </div>
                   <div className="next-song-info">
                     <div className="next-song-name">{songQueue[currentQueueIndex + 1].name}</div>
                     <div className="next-song-artist">
-                      {songQueue[currentQueueIndex + 1].artists?.primary?.map(a => a.name).join(', ')}
+                      {songQueue[currentQueueIndex + 1].primaryArtists || songQueue[currentQueueIndex + 1].artist || 'Unknown Artist'}
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {/* Queue Sidebar */}
-      {currentlyPlaying && showQueue && songQueue.length > 0 && (
-        <div className="queue-sidebar">
-          <div className="queue-header">
-            <h3>Queue</h3>
-            <button className="queue-close" onClick={() => setShowQueue(false)}>×</button>
-          </div>
-          
-          <div className="queue-list">
-            {songQueue.map((song, index) => (
-              <div 
-                key={song.id + index}
-                className={`queue-item ${index === currentQueueIndex ? 'current' : ''}`}
-                onClick={() => {
-                  if (index !== currentQueueIndex) {
-                    setCurrentQueueIndex(index);
-                    loadAndPlaySong(song);
-                  }
-                }}
-              >
-                <div className="queue-number">{index + 1}</div>
-                <img 
-                  src={ensureHttps(song.image?.[0]?.url)} 
-                  alt={song.name} 
-                  className="queue-thumbnail"
-                />
-                <div className="queue-item-info">
-                  <div className="queue-item-name">{song.name}</div>
-                  <div className="queue-item-artist">
-                    {song.artists?.primary?.map(a => a.name).join(', ')}
+              ) : (
+                <div className="next-up-song">
+                  <div className="next-song-info">
+                    <div className="next-song-name">End of Queue</div>
                   </div>
                 </div>
-                {index === currentQueueIndex && (
-                  <div className="playing-indicator">
-                    {isPlaying ? '▶️' : '⏸️'}
-                  </div>
-                )}
-              </div>
-            ))}
+              )}
+            </div>
             
-            {isLoadingMoreSongs && (
-              <div className="queue-loading-indicator">
-                <div className="loading-spinner"></div>
-                <div>Adding more songs to queue using "{currentAutoSearchTerm}"</div>
-              </div>
-            )}
+            <button 
+              className={`queue-toggle ${showQueue ? 'active' : ''}`}
+              onClick={() => setShowQueue(!showQueue)}
+            >
+              {showQueue ? 'Hide Queue' : 'Show Queue'}
+            </button>
+            
+            <audio
+              ref={audioRef}
+              src={audioUrl}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={handleTrackEnded}
+              onTimeUpdate={handleTimeUpdate}
+              onDurationChange={handleDurationChange}
+            />
           </div>
-        </div>
-      )}
-
-      {/* Hidden audio element - with added event listeners */}
-      <audio 
-        ref={audioRef} 
-        onEnded={handleTrackEnded}
-        onTimeUpdate={handleTimeUpdate}
-        onDurationChange={handleDurationChange}
-      />
+        )}
+      </div>
+      
+      {/* Modal Components */}
+      {renderLoginModal()}
+      {renderSubscriptionModal()}
     </div>
   );
 }
 
-export default App
+// Wrap the app with the AuthProvider
+function App() {
+  return (
+    <AuthProvider>
+      <BerryMusicApp />
+    </AuthProvider>
+  );
+}
+
+export default App;

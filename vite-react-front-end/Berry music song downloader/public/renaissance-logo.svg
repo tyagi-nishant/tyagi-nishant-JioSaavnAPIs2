@@ -1,0 +1,41 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for wood effect -->
+    <linearGradient id="woodGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#A0522D; stop-opacity:1" /> <!-- Sienna -->
+      <stop offset="50%" style="stop-color:#D2691E; stop-opacity:1" /> <!-- Chocolate -->
+      <stop offset="100%" style="stop-color:#8B4513; stop-opacity:1" /> <!-- SaddleBrown -->
+    </linearGradient>
+  </defs>
+
+  <!-- Guitar Body -->
+  <path d="M 50 15 
+           C 30 15, 15 30, 15 50 
+           C 15 80, 35 95, 50 95 
+           C 65 95, 85 80, 85 50 
+           C 85 30, 70 15, 50 15 Z
+           M 50 25 
+           C 75 25, 80 40, 80 50 
+           C 80 70, 65 90, 50 90 
+           C 35 90, 20 70, 20 50 
+           C 20 40, 25 25, 50 25 Z" 
+        fill="url(#woodGradient)" stroke="#442D1D" stroke-width="1.5"/>
+
+  <!-- Sound Hole -->
+  <circle cx="50" cy="50" r="10" fill="#331A00"/>
+
+  <!-- Neck -->
+  <rect x="46" y="5" width="8" height="30" fill="#654321" stroke="#442D1D" stroke-width="1"/>
+  
+  <!-- Headstock -->
+  <path d="M 45 5 L 42 2 L 58 2 L 55 5 Z" fill="#654321" stroke="#442D1D" stroke-width="1"/>
+
+  <!-- Bridge (Simple) -->
+  <rect x="40" y="75" width="20" height="3" fill="#442D1D" rx="1"/>
+  
+  <!-- Strings (Simplified) -->
+  <line x1="50" y1="8" x2="50" y2="76" stroke="#CCCCCC" stroke-width="0.5"/>
+  <line x1="48" y1="8" x2="47" y2="76" stroke="#CCCCCC" stroke-width="0.5"/>
+  <line x1="52" y1="8" x2="53" y2="76" stroke="#CCCCCC" stroke-width="0.5"/>
+
+</svg>

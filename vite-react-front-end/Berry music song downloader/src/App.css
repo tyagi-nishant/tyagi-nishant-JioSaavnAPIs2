@@ -30,6 +30,50 @@ body {
   min-height: 100vh;
 }
 
+.music-app.dark-theme {
+  --secondary-color: #03dac6;
+  --background-color: #121212;
+  --surface-color: #1e1e1e;
+  --card-color: #2a2a2a;
+  --error-color: #cf6679;
+  --text-color: #e1e1e1;
+  --text-secondary-color: #a0a0a0;
+}
+
+/* Add styles for the logo */
+.app-logo {
+  height: 40px; /* Adjust height as needed */
+  width: auto;  /* Maintain aspect ratio */
+  margin-right: 1rem; /* Optional spacing */
+}
+
+/* Main container layout */
+.main-container {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+  background-image: url('/renaissance-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  filter: brightness(0.7);
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  transition: margin-right 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.main-content.with-queue {
+  margin-right: 320px;
+}
+
 /* Header styles */
 .app-header {
   background-color: var(--secondary-color);
@@ -81,30 +125,174 @@ body {
   background-color: #1ed760;
 }
 
-/* Main content styles */
-.main-content {
-  flex: 1;
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-}
-
+/* Welcome screen with renaissance theme */
 .welcome-screen {
   text-align: center;
-  margin-top: 4rem;
+  height: calc(100vh - 150px); /* Adjust based on header height */
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  position: relative;
 }
 
-.welcome-screen h2 {
+.renaissance-artwork {
+  position: relative;
+  width: 100%;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.welcome-text {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  width: 90%;
+  max-width: 800px;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 2rem;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  margin: 0 auto;
+}
+
+.welcome-text h2 {
   margin-bottom: 1rem;
-  font-size: 2rem;
+  font-size: 2.5rem;
+  color: var(--primary-color);
+  font-weight: 700;
 }
 
-.welcome-screen p {
+.welcome-text p {
   font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+/* Adjust feature section to stay on top of the background */
+.features-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: auto;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 1;
+  padding: 0 2rem;
+  max-width: 1200px;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.feature-card {
+  background-color: var(--card-color);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  background-color: rgba(40, 40, 40, 0.8);
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.feature-card p {
   opacity: 0.8;
 }
 
+/* Modal components */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background-color: var(--card-color);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.modal-content.subscription-modal {
+  max-width: 900px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 1.5rem;
+  cursor: pointer;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Queue toggle button */
+.queue-toggle {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-left: auto;
+}
+
+.queue-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.queue-toggle.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* Main content styles */
 .loading {
   text-align: center;
   padding: 2rem;
@@ -823,5 +1011,122 @@ body {
   border-radius: 8px;
   font-size: 0.9rem;
   color: #fff;
+}
+
+/* Search results area needs to be above the fixed welcome screen */
+.search-results {
+  position: relative;
+  z-index: 1;
+}
+
+/* Styles for the navigation bar */
+.navbar {
+  display: flex; /* Enable flexbox */
+  justify-content: space-between; /* Push left and right content apart */
+  align-items: center; /* Vertically align items in the middle */
+  padding: 0.8rem 1.5rem; /* Add some padding (vertical, horizontal) */
+  background-color: var(--card-color); /* Give it a background */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Optional shadow */
+  position: sticky; /* Make it stick to the top */
+  top: 0;
+  z-index: 1000; /* Ensure it's above other content */
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center; /* Align items inside (logo div) */
+}
+
+/* Style the container holding the logo image and title */
+.navbar-left .logo {
+    display: flex;
+    align-items: center; /* Align logo img and h1 */
+    gap: 0.75rem; /* Space between logo img and h1 */
+}
+
+.navbar-left .logo h1 {
+    margin: 0; /* Remove default margin from h1 */
+    font-size: 1.5rem; /* Adjust title size */
+    color: var(--text-color);
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center; /* Align items inside (buttons/menu) */
+  gap: 1rem; /* Add space between buttons */
+}
+
+/* Basic button styling (if not already present) */
+.navbar-right button {
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.navbar-right .signin-button {
+  background-color: var(--primary-color, #22c55e); /* Use variable or fallback */
+  color: white;
+}
+
+.navbar-right .debug-button {
+    background-color: #ffc107; /* Example: Warning color */
+    color: #333;
+}
+
+/* User Menu Specifics (if needed) */
+.navbar-right .user-menu {
+    position: relative; /* For dropdown positioning */
+}
+
+.navbar-right .profile-button {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    gap: 0.5rem;
+}
+
+.navbar-right .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: var(--primary-color, #22c55e);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.navbar-right .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 5px); /* Position below the button */
+    right: 0;
+    background-color: var(--surface-color, #1e1e1e);
+    border-radius: 5px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    padding: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 150px; /* Minimum width for dropdown */
+    z-index: 1001; /* Above navbar */
+}
+
+.navbar-right .dropdown-item {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.navbar-right .dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
