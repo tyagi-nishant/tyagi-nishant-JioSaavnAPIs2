@@ -46,9 +46,31 @@ function BerryMusicApp() {
     console.log("Auth state in App:", { user, hasPremiumAccess });
   }, [user, hasPremiumAccess]);
 
-  // Utility function to ensure URLs use HTTPS
-  const ensureHttps = (url) => {
-    if (!url) return url;
+  // Utility function to ensure URLs use HTTPS and handle different image data types
+  const ensureHttps = (imageUrlData) => {
+    let url = null; // Start with null
+
+    // Check if it's an array and not empty
+    if (Array.isArray(imageUrlData) && imageUrlData.length > 0) {
+      // Try to get the 'url' property from the last item in the array (highest quality)
+      const lastImage = imageUrlData[imageUrlData.length - 1];
+      if (lastImage && typeof lastImage.url === 'string') {
+        url = lastImage.url;
+      }
+    }
+    // If it wasn't an array, check if it's already a string
+    else if (typeof imageUrlData === 'string') {
+      url = imageUrlData;
+    }
+    // Otherwise, imageUrlData is null, undefined, empty array, or unexpected format, so url remains null.
+
+    // If we couldn't find a valid string URL, return null (or a placeholder)
+    if (!url || typeof url !== 'string') {
+      // console.warn("Could not determine valid image URL from:", imageUrlData);
+      return null; // Or return a path to a default placeholder image like '/images/placeholder.png'
+    }
+
+    // Now we are sure url is a string, replace http with https
     return url.replace(/^http:\/\//i, 'https://');
   };
 
@@ -278,112 +300,122 @@ function BerryMusicApp() {
   
   // Function to load and play a song
   const loadAndPlaySong = async (song) => {
-    console.log(`🎵 Loading song: "${song.name}" (ID: ${song.id})`);
-    try {
-      setCurrentlyPlaying(song);
-      setIsPlaying(true); // Set to playing state
-      console.log("⏳ Set isPlaying to true");
-      
-      // First, we need to get detailed song info which includes the download URLs
-      const baseUrl = 'https://jio-saavn2.vercel.app/';
-      console.log(`🔄 Fetching song details from API for ID: ${song.id}`);
-      const response = await fetch(`${baseUrl}api/songs?ids=${song.id}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log(`✅ Song details received from API, success: ${data.success}`);
-      
-      if (data.success && data.data && data.data.length > 0) {
-        const songDetails = data.data[0];
-        
-        // Find the best quality URL available
-        const qualities = ['320kbps', '160kbps', '96kbps', '48kbps', '12kbps'];
-        let selectedUrl = null;
-        
-        for (const quality of qualities) {
-          const found = songDetails.downloadUrl.find(link => link.quality === quality);
-          if (found && found.url) {
-            selectedUrl = ensureHttps(found.url); // Ensure HTTPS URL
-            console.log(`✅ Found audio URL with quality: ${quality}`);
-            break;
-          }
-        }
-        
-        if (selectedUrl) {
-          console.log(`🔊 Setting audio source to ${selectedUrl.substring(0, 50)}...`);
-          // Update the audio directly to ensure immediate playback
-          if (audioRef.current) {
-            // Directly set audio properties
-            audioRef.current.src = selectedUrl;
-            
-            // Force play after source is set with a small delay to ensure it works after loading
-            console.log("⏱️ Setting timeout to play audio after 100ms");
-            setTimeout(() => {
-              if (audioRef.current) {
-                console.log("▶️ Attempting to play audio...");
-                const playPromise = audioRef.current.play();
-                
-                if (playPromise !== undefined) {
-                  playPromise.catch(err => {
-                    console.error('❌ Error playing audio:', err);
-                    // Try once more after a short delay
-                    console.log("⏱️ First play attempt failed, retrying after 300ms");
-                    setTimeout(() => {
-                      if (audioRef.current) {
-                        console.log("▶️ Second attempt to play audio...");
-                        audioRef.current.play().catch(e => {
-                          console.error('❌ Second attempt to play failed:', e);
-                          setIsPlaying(false);
-                        });
-                      }
-                    }, 300);
-                  });
-                }
-              }
-            }, 100);
-          }
-          
-          // Also update state for consistency
-          setAudioUrl(selectedUrl);
-        } else {
-          console.error('❌ No playable URL found for this song');
-          setAudioUrl(null);
-          setIsPlaying(false);
-        }
-      } else {
-        console.error('❌ Failed to get song details');
-        setAudioUrl(null);
-        setIsPlaying(false);
-      }
-    } catch (error) {
-      console.error('🐞 Error fetching song details:', error);
-      setAudioUrl(null);
+    console.log(">>> loadAndPlaySong START:", song?.name, "ID:", song?.id);
+    if (!song || !song.id) {
+      console.error('Error: Invalid song data passed to loadAndPlaySong', song);
       setIsPlaying(false);
+      setAudioUrl(null);
+      setCurrentlyPlaying(null);
+      return;
+    }
+
+    try {
+      // --- FETCH DETAILED SONG INFO --- 
+      console.log(`>>> Fetching details for song ID: ${song.id}`);
+      const baseUrl = 'https://jio-saavn2.vercel.app/';
+      const detailsResponse = await fetch(`${baseUrl}api/songs?ids=${song.id}`);
+      if (!detailsResponse.ok) {
+        throw new Error(`HTTP error fetching song details! status: ${detailsResponse.status}`);
+      }
+      const detailsData = await detailsResponse.json();
+      if (!detailsData.success || !detailsData.data || detailsData.data.length === 0) {
+        throw new Error('Failed to get valid song details from API');
+      }
+      const detailedSong = detailsData.data[0];
+      console.log(">>> Received detailed song data:", detailedSong);
+      // --- END FETCH --- 
+
+      // Now use detailedSong.downloadUrl
+      if (!detailedSong.downloadUrl || !Array.isArray(detailedSong.downloadUrl) || detailedSong.downloadUrl.length === 0) {
+        console.error('Error: Invalid or missing downloadUrl array in detailed song data', detailedSong);
+        throw new Error('Download URL not found in detailed song data');
+      }
+
+      const lastDownloadObject = detailedSong.downloadUrl.slice(-1)[0];
+      console.log(">>> Last download object structure:", lastDownloadObject);
+      const bestQualityUrl = lastDownloadObject?.link || lastDownloadObject?.url;
+
+      if (!bestQualityUrl || typeof bestQualityUrl !== 'string') {
+        console.error('Error: Could not find a valid download link/url property', lastDownloadObject);
+        throw new Error('Could not extract valid download URL');
+      }
+
+      const httpsUrl = ensureHttps(bestQualityUrl);
+      console.log(`>>> Setting audioUrl to: ${httpsUrl}`);
+      setAudioUrl(httpsUrl);
+
+      console.log(">>> Setting currentlyPlaying:", detailedSong); // Use detailed song data
+      setCurrentlyPlaying(detailedSong); // Use detailed song data
+
+      console.log(">>> loadAndPlaySong END:", detailedSong?.name);
+    } catch (error) {
+      console.error('>>> loadAndPlaySong FAILED:', error);
+      setIsPlaying(false);
+      setAudioUrl(null);
+      setCurrentlyPlaying(null);
     }
   };
   
-  // Modified effect to handle audioUrl changes more carefully
+  // Effect to handle AUDIO SOURCE changes and INITIATE PLAY
   useEffect(() => {
-    if (audioUrl && audioRef.current && isPlaying) {
-      // Only set source if it has changed
-      if (audioRef.current.src !== audioUrl) {
-        audioRef.current.src = audioUrl;
-      }
-      
-      // Always attempt to play when this effect runs
-      const playPromise = audioRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(err => {
-          console.error('Error playing audio:', err);
-          setIsPlaying(false);
-        });
-      }
+    if (audioRef.current && audioUrl) {
+      console.log(`>>> useEffect[audioUrl]: New URL detected: ${audioUrl}. Setting src and loading.`);
+      audioRef.current.src = audioUrl;
+      // We don't call play() here directly anymore.
+      // We rely on the 'canplaythrough' event listener below.
+    } else if (audioRef.current) {
+      console.log(">>> useEffect[audioUrl]: audioUrl is null. Pausing and resetting src.");
+      audioRef.current.pause();
+      audioRef.current.removeAttribute('src'); // Reset src if URL is null
     }
-  }, [audioUrl, isPlaying]);
+  }, [audioUrl]); // Only depends on audioUrl changes
+
+  // Effect to handle PLAY/PAUSE state changes
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Function to attempt playing
+    const attemptPlay = () => {
+      console.log(">>> attemptPlay: Trying to play...");
+      audio.play().then(() => {
+        console.log(">>> attemptPlay: Play successful.");
+        setIsPlaying(true); // Sync state ONLY after successful play
+      }).catch(error => {
+        console.error('>>> attemptPlay: Error playing audio:', error);
+        setIsPlaying(false); // Sync state on error
+        // Don't auto-retry here, could cause loops
+      });
+    };
+
+    // Event listener for when the browser can play the whole file
+    const handleCanPlayThrough = () => {
+      console.log(">>> handleCanPlayThrough: Audio ready. Attempting play.");
+      if (currentlyPlaying) { // Only play if a song is loaded
+        attemptPlay();
+      }
+    };
+
+    // Add event listener when component mounts or audio ref changes
+    console.log(">>> useEffect[play/pause]: Adding 'canplaythrough' listener.");
+    audio.addEventListener('canplaythrough', handleCanPlayThrough);
+
+    // Initial check: If we are supposed to be playing and have a URL, try playing
+    // (This handles cases where play was intended but interrupted before 'canplaythrough')
+    if (isPlaying && audioUrl) {
+      console.log(">>> useEffect[play/pause]: Initial state isPlaying=true, attempting play.");
+      attemptPlay();
+    } else if (!isPlaying) {
+      console.log(">>> useEffect[play/pause]: Initial state isPlaying=false, pausing.");
+      audio.pause();
+    }
+
+    // Cleanup function
+    return () => {
+      console.log(">>> useEffect[play/pause]: Removing 'canplaythrough' listener.");
+      audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+    };
+  }, [isPlaying, currentlyPlaying]); // Depends on isPlaying intent and which song is loaded
 
   // Function to play the next song in queue
   const playNextSong = async () => {
@@ -429,20 +461,6 @@ function BerryMusicApp() {
     setCurrentQueueIndex(prevIndex);
     loadAndPlaySong(songQueue[prevIndex]);
   };
-
-  // Effect to handle audio element play/pause based on isPlaying state
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch(err => {
-          console.error('Error playing audio:', err);
-          setIsPlaying(false);
-        });
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isPlaying, audioUrl]);
 
   // Handle track ending - play next song
   const handleTrackEnded = () => {
@@ -738,39 +756,96 @@ function BerryMusicApp() {
     );
   };
 
-  // Render modified song item to include download button
-  const renderSongItem = (song, index, inQueue = false) => {
+  // Render a song as a grid card (similar to album/artist cards)
+  const renderSongCard = (song) => {
     const isCurrentSong = currentlyPlaying && currentlyPlaying.id === song.id;
-    
+    const isThisSongPlaying = isCurrentSong && isPlaying;
+
     return (
       <div 
-        key={`${song.id}-${index}`} 
-        className={`song-item ${isCurrentSong ? 'current' : ''}`}
+        key={song.id} 
+        className="music-card clickable" // Use music-card class
+        onClick={() => playSong(song, searchResults.songs.results)} // Play song from search results context
       >
-        <div className="song-number">{index + 1}</div>
-        <div className="song-thumbnail">
+        <div className="card-image">
           <img src={ensureHttps(song.image)} alt={song.name} />
+          {/* Play button overlay - adapt from music-card hover style */}
+          <button 
+             className={`play-button ${isThisSongPlaying ? 'playing' : ''}`}
+             style={{ opacity: 1, transform: 'translateY(0)' }} // Make always visible for song cards
+             onClick={(e) => {
+                e.stopPropagation(); // Prevent card click from triggering as well
+                playSong(song, searchResults.songs.results);
+             }}
+          >
+            {isThisSongPlaying ? '❚❚' : '▶'}
+          </button>
         </div>
+        <div className="card-info">
+          <h3>{song.name}</h3>
+          <p>{song.primaryArtists || song.artist || 'Unknown Artist'}</p>
+        </div>
+      </div>
+    );
+  };
+
+  // Function to render a single song item
+  const renderSongItem = (song, index, context = 'search') => {
+    if (!song || !song.id) {
+      console.warn("Attempted to render invalid song item:", song);
+      return null;
+    }
+    
+    const isCurrent = currentlyPlaying && currentlyPlaying.id === song.id;
+    const displayIndex = context === 'queue' ? index + 1 : index + 1; // Use 1-based index
+    const uniqueKey = `${context}-${song.id}-${index}`;
+    const imageUrl = ensureHttps(song.image) || '/placeholder.png'; // Use ensureHttps and provide a fallback
+
+    return (
+      <div 
+        key={uniqueKey} // Use the more robust unique key
+        className={`song-item ${isCurrent ? 'current' : ''}`}
+      >
         <div className="song-info">
-          <div className="song-title">{song.name}</div>
-          <div className="song-artist">{song.primaryArtists || song.artist || 'Unknown Artist'}</div>
-          
-          {/* Add download button for premium users */}
-          {!inQueue && <DownloadButton song={song} />}
+          <span className="song-number">{displayIndex}.</span>
+          <div className="song-thumbnail">
+            <img src={imageUrl} alt={song.name || 'Song thumbnail'} />
+          </div>
+          <div className="song-details">
+            <span className="song-title">{song.name || 'Untitled Song'}</span>
+            <span className="song-artist">{song.primaryArtists || 'Unknown Artist'}</span>
+          </div>
         </div>
-        <button 
-          className={`song-play ${isCurrentSong && isPlaying ? 'playing' : ''}`}
-          onClick={() => {
-            if (inQueue) {
-              setCurrentQueueIndex(index);
-              playSong(song, songQueue);
-            } else {
-              playSong(song, detailSongs);
-            }
-          }}
-        >
-          {isCurrentSong && isPlaying ? '❚❚' : '▶'}
-        </button>
+        <div className="song-controls">
+          <button 
+            className={`song-play ${isCurrent && isPlaying ? 'playing' : ''}`}
+            onClick={() => {
+              if (isCurrent && isPlaying) {
+                setIsPlaying(false);
+              } else {
+                // Determine the correct song list context for playSong
+                const songListContext = context === 'queue' 
+                  ? songQueue 
+                  : context === 'detail'
+                    ? detailSongs
+                    : (searchResults?.songs?.results || []);
+                playSong(song, songListContext);
+              }
+            }}
+          >
+            {isCurrent && isPlaying ? '❚❚' : '▶'}
+          </button>
+          {/* Add Download Button - Conditionally Rendered */}
+          {hasPremiumAccess && (
+            <button 
+              className="download-button"
+              onClick={() => console.log('Download clicked for:', song.name, 'Premium:', hasPremiumAccess)}
+              title="Download song (Premium required)"
+            >
+              ⬇️
+            </button>
+          )}
+        </div>
       </div>
     );
   };
@@ -784,6 +859,10 @@ function BerryMusicApp() {
           <div className="welcome-text">
             <h2>Welcome to Berry Music Downloader</h2>
             <p>Search for your favorite songs, artists, albums, and playlists</p>
+            
+            {/* Search Bar Removed From Here */}
+            {/* <div className="search-container"> ... </div> */}
+            
           </div>
         </div>
         
@@ -824,14 +903,22 @@ function BerryMusicApp() {
         }} 
       />
       
-      {/* Conditionally render the header only if user is logged in */}
-      {user && (
+      {/* Header removed as search bar is moved to welcome screen */}
+      {/* {user && (
         <header className="app-header">
+           Search container was here 
+        </header>
+      )} */}
+      
+      <div className="main-container">
+        <div className={`main-content ${showQueue ? 'with-queue' : ''}`}>
+          
+          {/* Search Bar - Moved here to be always visible */} 
           <div className="search-container">
             <input
               type="text"
               className="search-input"
-              placeholder="Search for songs, artists, albums, and playlists..."
+              placeholder="Search millions of songs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -840,11 +927,8 @@ function BerryMusicApp() {
               Search
             </button>
           </div>
-        </header>
-      )}
-      
-      <div className="main-container">
-        <div className={`main-content ${showQueue ? 'with-queue' : ''}`}>
+          {/* End Search Bar */}
+          
           {/* Detail view or search results */}
           {selectedDetail ? (
             <div className="detail-view">
@@ -870,7 +954,7 @@ function BerryMusicApp() {
                 <h3>Songs</h3>
                 {detailSongs.length > 0 ? (
                   <div className="songs-list">
-                    {detailSongs.map((song, index) => renderSongItem(song, index))}
+                    {detailSongs.map((song, index) => renderSongItem(song, index, 'detail'))}
                   </div>
                 ) : (
                   <div className="no-songs">No songs available</div>
@@ -886,12 +970,13 @@ function BerryMusicApp() {
                   <div className="error-message">{searchResults.error}</div>
                 ) : (
                   <div>
-                    {/* Songs Section */}
+                    {/* Songs Section - Use Cards */}
                     {searchResults.songs && searchResults.songs.results && searchResults.songs.results.length > 0 && (
                       <div className="results-section">
                         <h2>Songs</h2>
-                        <div className="songs-list">
-                          {searchResults.songs.results.map((song, index) => renderSongItem(song, index))}
+                        {/* Use cards-container and renderSongCard for main song results */}
+                        <div className="cards-container">
+                          {searchResults.songs.results.map((song) => renderSongCard(song))}
                         </div>
                       </div>
                     )}
@@ -984,15 +1069,12 @@ function BerryMusicApp() {
             </div>
             {songQueue.length > 0 ? (
               <div className="queue-list">
-                {songQueue.map((song, index) => renderSongItem(song, index, true))}
-                
-                {/* Loading indicator at the end of the queue */}
-                {isLoadingMoreSongs && (
-                  <div className="queue-loading-indicator">
-                    <div className="loading-spinner"></div>
-                    <p>Loading more songs...</p>
-                  </div>
+                {songQueue.length === 0 ? (
+                  <div className="empty-queue">Queue is empty</div>
+                ) : (
+                  songQueue.map((song, index) => renderSongItem(song, index, 'queue'))
                 )}
+                {isLoadingMoreSongs && <div className="queue-loading-indicator">Loading more...</div>}
               </div>
             ) : (
               <div className="no-songs">Queue is empty. Search for songs to add to the queue.</div>

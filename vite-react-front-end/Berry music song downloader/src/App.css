@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 /* Reset and base styles */
 * {
   box-sizing: border-box;
@@ -13,24 +15,35 @@
   --card-color: #282828;
   --hover-color: #333333;
   --transition-speed: 0.3s;
+  --rgb-text-color: 225, 225, 225; /* Example: Match --text-color: #e1e1e1 */
+  --rgb-primary-color: 34, 197, 94; /* Example: Match default green */
+  --rgb-surface-color: 30, 30, 30;  /* Example: Match --surface-color: #1e1e1e */
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  /* font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; */
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Added Inter */
+  /* font-size: 1.1rem; */ /* Reverted base font size */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-color: var(--background-color);
   color: var(--text-color);
   line-height: 1.6;
   min-height: 100vh;
-  margin: 0;
 }
 
 .music-app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* height: 100vh; */ /* Reverted */
+  /* overflow: hidden; */ /* Reverted */
 }
 
 .music-app.dark-theme {
+  --primary-color: #bb86fc;
+  --primary-variant: #3700b3;
   --secondary-color: #03dac6;
   --background-color: #121212;
   --surface-color: #1e1e1e;
@@ -38,6 +51,11 @@ body {
   --error-color: #cf6679;
   --text-color: #e1e1e1;
   --text-secondary-color: #a0a0a0;
+
+  /* Update RGB values to match dark theme */
+  --rgb-text-color: 225, 225, 225;
+  --rgb-primary-color: 187, 134, 252; /* Match --primary-color: #bb86fc */
+  --rgb-surface-color: 30, 30, 30; /* Match --surface-color: #1e1e1e */
 }
 
 /* Add styles for the logo */
@@ -51,7 +69,7 @@ body {
 .main-container {
   display: flex;
   flex-grow: 1;
-  overflow: hidden;
+  overflow: hidden; /* Restored */
   background-image: url('/renaissance-bg.png');
   background-size: cover;
   background-position: center;
@@ -61,13 +79,15 @@ body {
 
 .main-content {
   flex: 1;
-  padding: 2rem;
-  max-width: 1200px;
+  padding: 2rem 2rem 8rem 2rem; /* Added bottom padding to account for audio player */
+  max-width: 1600px;
   margin: 0 auto;
   width: 100%;
   transition: margin-right 0.3s ease;
   position: relative;
   z-index: 1;
+  /* overflow-y: auto; */ /* Reverted */
+  /* height: 100%; */ /* Reverted */
 }
 
 .main-content.with-queue {
@@ -75,7 +95,7 @@ body {
 }
 
 /* Header styles */
-.app-header {
+/* .app-header {
   background-color: var(--secondary-color);
   padding: 1rem;
   display: flex;
@@ -91,38 +111,53 @@ body {
   margin-bottom: 1rem;
   font-size: 1.8rem;
   color: var(--primary-color);
-}
+} */
 
+/* Updated Search Container Styles (Now at top of main-content) */
+/* .welcome-text .search-container */
 .search-container {
   display: flex;
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
+  /* max-width: 500px; */
+  max-width: 700px; /* Allow wider search bar */
+  /* margin: 2rem auto 0; */
+  margin: 0 auto 2rem; /* Center and add bottom margin */
 }
 
+/* .welcome-text .search-input */
 .search-input {
   flex: 1;
-  padding: 0.8rem 1rem;
-  border: none;
-  border-radius: 30px 0 0 30px;
+  padding: 0.8rem 1.5rem;
+  border: 1px solid rgba(var(--rgb-text-color, 225, 225, 225), 0.2);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
   font-size: 1rem;
-  background-color: white;
-  color: black;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-color);
+  outline: none;
+}
+/* .welcome-text .search-input::placeholder */
+.search-input::placeholder {
+    color: var(--text-secondary-color);
+    opacity: 0.8;
 }
 
+/* .welcome-text .search-button */
 .search-button {
   padding: 0.8rem 1.5rem;
-  background-color: var(--primary-color);
+  background-color: #ff003c3c;
   color: white;
   border: none;
-  border-radius: 0 30px 30px 0;
+  border-radius: 0 6px 6px 0;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 500;
   transition: background-color var(--transition-speed);
+  margin-left: -1px;
 }
 
+/* .welcome-text .search-button:hover */
 .search-button:hover {
-  background-color: #1ed760;
+  background-color: #ff003c80;
 }
 
 /* Welcome screen with renaissance theme */
@@ -162,7 +197,7 @@ body {
 .welcome-text h2 {
   margin-bottom: 1rem;
   font-size: 2.5rem;
-  color: var(--primary-color);
+  color: var(--text-color);
   font-weight: 700;
 }
 
@@ -174,22 +209,23 @@ body {
 /* Adjust feature section to stay on top of the background */
 .features-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+  /* grid-template-columns: repeat(auto-fit, minmax(20px, 1fr)); */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Adjusted min width */
+  gap: 1.5rem;
   margin-top: auto;
   margin-bottom: 2rem;
   position: relative;
   z-index: 1;
-  padding: 0 2rem;
-  max-width: 1200px;
+  padding: 1rem;
+  max-width: 1600px;
   width: 100%;
   pointer-events: auto;
 }
 
 .feature-card {
   background-color: var(--card-color);
-  border-radius: 12px;
-  padding: 2rem;
+  border-radius: 6px;
+  padding: 1rem;
   text-align: center;
   transition: transform 0.3s, box-shadow 0.3s;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
@@ -208,7 +244,7 @@ body {
 }
 
 .feature-card h3 {
-  color: var(--primary-color);
+  color: var(--text-color);
   margin-bottom: 0.5rem;
   font-size: 1.5rem;
 }
@@ -326,8 +362,9 @@ body {
 
 .cards-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.5rem;
+  /* grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); */
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); /* Further reduced min width */
+  gap: 0.8rem;
 }
 
 .music-card {
@@ -393,115 +430,261 @@ body {
 }
 
 .card-info {
-  padding: 1rem;
+  /* padding: 0.5rem; */
+  padding: 0.3rem; /* Further reduced padding */
 }
 
 .card-info h3 {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
+  /* font-size: 0.8rem; */
+  font-size: 0.75rem; /* Further reduced font size */
+  /* margin-bottom: 0.2rem; */
+  margin-bottom: 0.15rem; /* Further reduced margin */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .card-info p {
-  font-size: 0.8rem;
+  /* font-size: 0.7rem; */
+  font-size: 0.65rem; /* Further reduced font size */
   opacity: 0.7;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Audio player styles */
+/* Styles for the navigation bar */
+.navbar {
+  display: flex; /* Enable flexbox */
+  justify-content: space-between; /* Push left and right content apart */
+  align-items: center; /* Vertically align items in the middle */
+  padding: 0.8rem 1.5rem; /* Add some padding (vertical, horizontal) */
+  background-color: var(--card-color); /* Give it a background */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Optional shadow */
+  position: sticky; /* Make it stick to the top */
+  top: 0;
+  z-index: 1000; /* Ensure it's above other content */
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center; /* Align items inside (logo div) */
+}
+
+/* Style the container holding the logo image and title */
+.navbar-left .logo {
+    display: flex;
+    align-items: center; /* Align logo img and h1 */
+    gap: 0.75rem; /* Space between logo img and h1 */
+}
+
+.navbar-left .logo h1 {
+    margin: 0; /* Remove default margin from h1 */
+    font-size: 1.5rem; /* Adjust title size */
+    color: var(--text-color);
+    opacity: 0.87; /* Slightly reduce emphasis to match perception */
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center; /* Align items inside (buttons/menu) */
+  gap: 1rem; /* Add space between buttons */
+}
+
+/* Basic button styling (if not already present) */
+.navbar-right button {
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.navbar-right .signin-button {
+  background-color: var(--primary-color, #22c55e); /* Use variable or fallback */
+  color: white;
+}
+
+.navbar-right .debug-button {
+    background-color: #ffc107; /* Example: Warning color */
+    color: #333;
+}
+
+/* User Menu Specifics (if needed) */
+.navbar-right .user-menu {
+    position: relative; /* For dropdown positioning */
+}
+
+.navbar-right .profile-button {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    gap: 0.5rem;
+}
+
+.navbar-right .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #ff003c3c; /* Changed to blue */
+    opacity: 0.9;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+/* Style for username text */
+.navbar-right .username {
+    font-size: 0.9rem; /* Match button font size or adjust */
+    opacity: 0.87; /* Match h1 opacity adjustment */
+    margin-left: 0.25rem; /* Small space after avatar */
+}
+
+.navbar-right .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 5px); /* Position below the button */
+    right: 0;
+    background-color: var(--surface-color, #1e1e1e);
+    border-radius: 5px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    padding: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 150px; /* Minimum width for dropdown */
+    z-index: 1001; /* Above navbar */
+}
+
+.navbar-right .dropdown-item {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.navbar-right .dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Refactored Audio Player Styles */
 .audio-player {
-  background: rgba(25, 20, 20, 0.85);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
-  padding: 1.2rem 1.5rem 1rem;
+  /* Ensure core positioning styles are present and correct */
   position: fixed;
   bottom: 0;
-  width: 100%;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  width: 100%; /* Explicit width */
+  z-index: 100; /* Ensure it's above main content */
+
+  /* Existing styles */
+  background: var(--surface-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* border-top: 1px solid rgba(255, 255, 255, 0.1); */
+  border-top: 1px solid rgba(var(--rgb-text-color, 225, 225, 225), 0.1); /* Use text color with alpha */
+  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.3); /* Slightly softer shadow */
+  padding: 1rem 1.5rem; /* Adjusted padding */
+  display: flex; /* Use flexbox for internal layout */
+  align-items: center;
+  gap: 1.5rem; /* Space between elements */
+}
+
+/* Group track info and controls */
+.audio-player-main {
+  display: flex;
+  align-items: center;
+  flex-grow: 1; /* Take available space */
+  gap: 1.5rem;
 }
 
 /* Progress bar styles */
 .progress-container {
   width: 100%;
-  height: 40px;
+  /* height: 40px; */ /* Let height be determined by content/padding */
+  height: auto; /* Remove fixed height */
   position: relative;
   cursor: pointer;
   display: flex;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding: 0;
+  flex-direction: column; /* Stack bar and time */
+  /* margin-bottom: 1rem; */ /* Remove bottom margin, spacing handled by parent */
+  flex-grow: 1; /* Allow progress bar to take space */
+  max-width: 600px; /* Optional: Max width for progress bar */
+  margin: 0 auto; /* Center if max-width is applied */
 }
 
-.progress-container:hover .progress-bar-knob {
-  transform: translateY(-50%) scale(1.2);
-  box-shadow: 0 0 15px rgba(29, 185, 84, 0.8), 0 0 25px rgba(29, 185, 84, 0.6);
+.progress-bar-elements {
+    position: relative;
+    width: 100%;
+    height: 8px; /* Slimmer progress bar */
+    display: flex;
+    align-items: center;
 }
+
+/* .progress-container:hover .progress-bar-knob { */
+  /* Keep existing hover effect or adjust */
+/* } */
 
 .progress-bar-bg {
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  height: 30px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* height: 30px; */
+  height: 100%; /* Match container height */
+  /* background: rgba(255, 255, 255, 0.08); */
+  background: rgba(var(--rgb-text-color, 225, 225, 225), 0.1); /* Use text color with alpha */
+  border-radius: 4px; /* Match theme */
+  /* backdrop-filter: blur(8px); */ /* Remove blur */
+  /* -webkit-backdrop-filter: blur(8px); */
+  /* border: 1px solid rgba(255, 255, 255, 0.1); */ /* Remove extra border */
+  box-shadow: none; /* Simplify */
   z-index: 1;
 }
 
 .progress-bar {
-  height: 30px;
-  background: rgba(29, 185, 84, 0.25);
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border-right: 2px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.2);
+  /* height: 30px; */
+  height: 100%; /* Match container height */
+  /* background: rgba(29, 185, 84, 0.25); */
+  background-color: var(--primary-color); /* Use primary color */
+  border-radius: 4px; /* Match theme */
+  /* backdrop-filter: blur(4px); */ /* Remove blur */
+  /* -webkit-backdrop-filter: blur(4px); */
+  /* border-right: 2px solid rgba(255, 255, 255, 0.4); */ /* Remove border */
+  /* box-shadow: 0 4px 12px rgba(29, 185, 84, 0.2); */ /* Remove shadow */
+  box-shadow: none; /* Simplify */
   position: absolute;
   left: 0;
   top: 0;
   z-index: 2;
   width: 0%;
   transition: width 0.1s linear;
-  overflow: hidden;
+  overflow: visible; /* Allow knob to overflow */
 }
 
-.progress-bar::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: linear-gradient(
-    90deg, 
-    rgba(255, 255, 255, 0) 0%, 
-    rgba(255, 255, 255, 0.1) 50%, 
-    rgba(255, 255, 255, 0.2) 100%
-  );
-  z-index: 1;
-}
+/* Remove ::after pseudo-element for gradient overlay */
+/* .progress-bar::after { ... } */
 
 .progress-bar-knob {
   position: absolute;
-  right: -8px;
+  right: 0; /* Position relative to the end of the progress bar */
   top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
+  transform: translateY(-50%) translateX(50%); /* Center knob on the line end */
+  width: 14px; /* Slightly smaller knob */
+  height: 14px;
   border-radius: 50%;
-  background-color: #fff;
-  box-shadow: 0 0 10px rgba(29, 185, 84, 0.6), 0 0 20px rgba(29, 185, 84, 0.4);
-  border: 2px solid var(--primary-color);
+  /* background-color: #fff; */
+  background-color: var(--text-color); /* Use text color */
+  /* box-shadow: 0 0 10px rgba(29, 185, 84, 0.6), 0 0 20px rgba(29, 185, 84, 0.4); */ /* Remove green shadow */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  /* border: 2px solid var(--primary-color); */ /* Remove border */
+  border: none;
   z-index: 3;
   opacity: 1;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -511,107 +694,148 @@ body {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  font-weight: normal; /* Adjust weight */
+  /* color: rgba(255, 255, 255, 0.8); */
+  color: var(--text-secondary-color); /* Use secondary text color */
   width: 100%;
   padding: 0 2px;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 5px;
+  /* position: absolute; */ /* Remove absolute positioning */
+  /* top: 100%; */
+  /* left: 0; */
+  margin-top: 6px; /* Add space above time */
 }
 
+/* Now playing section */
 .now-playing {
   display: flex;
   align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
+  /* max-width: 1200px; */ /* Remove max-width, handled by flex */
+  /* margin: 0 auto; */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
-.mini-thumbnail {
-  width: 50px;
-  height: 50px;
+.mini-thumbnail img { /* Target img inside */
+  display: block; /* Remove potential extra space */
+  width: 45px; /* Slightly smaller */
+  height: 45px;
   border-radius: 4px;
-  margin-right: 1rem;
+  margin-right: 0.8rem; /* Adjust spacing */
   object-fit: cover;
 }
 
 .track-info {
   flex: 1;
+  min-width: 100px; /* Prevent excessive shrinking */
 }
 
 .track-name {
-  font-weight: bold;
+  font-weight: 500; /* Adjust weight */
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .track-artist {
-  font-size: 0.9rem;
-  opacity: 0.7;
+  font-size: 0.8rem; /* Adjust size */
+  /* opacity: 0.7; */
+  color: var(--text-secondary-color); /* Use secondary text color */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Player Controls section */
 .player-controls {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  margin-right: 1.5rem;
+  gap: 0.5rem; /* Reduce gap */
+  /* margin-right: 1.5rem; */ /* Remove margin, handled by parent gap */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .player-control {
-  width: 40px;
-  height: 40px;
+  width: 36px; /* Slightly smaller */
+  height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
+  /* background: rgba(255, 255, 255, 0.1); */
+  background: transparent; /* Make transparent by default */
+  /* backdrop-filter: blur(4px); */
+  /* -webkit-backdrop-filter: blur(4px); */
+  /* border: 1px solid rgba(255, 255, 255, 0.2); */
+  border: none; /* Remove border */
+  /* color: white; */
+  color: var(--text-secondary-color); /* Use secondary text color */
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.1rem; /* Adjust icon size */
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); */
+  box-shadow: none; /* Remove shadow */
 }
 
 .player-control:hover {
-  background: rgba(29, 185, 84, 0.2);
-  border-color: rgba(29, 185, 84, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(29, 185, 84, 0.3);
+  /* background: rgba(29, 185, 84, 0.2); */
+  background-color: rgba(var(--rgb-primary-color, 34, 197, 94), 0.15); /* Use primary color with alpha */
+  /* border-color: rgba(29, 185, 84, 0.3); */
+  color: var(--primary-color); /* Highlight icon with primary color */
+  /* transform: translateY(-2px); */
+  transform: scale(1.1); /* Scale effect on hover */
+  /* box-shadow: 0 6px 15px rgba(29, 185, 84, 0.3); */
 }
 
-.player-control.playing {
-  background: rgba(29, 185, 84, 0.25);
-  border-color: rgba(29, 185, 84, 0.5);
+/* Play/Pause Button specific */
+.player-control.play-pause {
+    width: 42px;
+    height: 42px;
+    color: var(--text-color); /* Make play/pause more prominent */
+}
+.player-control.play-pause:hover {
+    color: var(--primary-color);
 }
 
-/* Next up song styles */
+
+.player-control.playing { /* Style when playing - subtle background */
+  /* background: rgba(29, 185, 84, 0.25); */
+  background-color: rgba(var(--rgb-primary-color, 34, 197, 94), 0.1);
+  /* border-color: rgba(29, 185, 84, 0.5); */
+  color: var(--primary-color);
+}
+
+/* Next up song styles - Optional: Can hide this on smaller screens */
 .next-up {
-  display: flex;
+  display: flex; /* Keep hidden on smaller screens if needed via media queries */
   align-items: center;
-  background: rgba(51, 51, 51, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 0.6rem;
-  max-width: 260px;
-  min-width: 200px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  /* background: rgba(51, 51, 51, 0.4); */
+  background: rgba(var(--rgb-surface-color, 30, 30, 30), 0.5); /* Use surface color with alpha */
+  /* backdrop-filter: blur(8px); */
+  /* -webkit-backdrop-filter: blur(8px); */
+  /* border: 1px solid rgba(255, 255, 255, 0.1); */
+  border: 1px solid rgba(var(--rgb-text-color, 225, 225, 225), 0.1);
+  border-radius: 6px; /* Consistent rounding */
+  padding: 0.5rem 0.8rem; /* Adjust padding */
+  max-width: 220px; /* Adjust width */
+  min-width: 180px;
+  /* box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); */
+  box-shadow: none;
   transition: all 0.3s ease;
+  flex-shrink: 0; /* Prevent shrinking */
+  overflow: hidden; /* Hide overflow */
 }
 
-.next-up:hover {
-  background: rgba(51, 51, 51, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-}
+/* .next-up:hover { */
+  /* background: rgba(51, 51, 51, 0.5); */
+  /* transform: translateY(-2px); */
+  /* box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); */
+/* } */
 
 .next-up-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem; /* Adjust size */
   margin-right: 0.5rem;
-  opacity: 0.7;
+  /* opacity: 0.7; */
+  color: var(--text-secondary-color); /* Use secondary text */
   white-space: nowrap;
 }
 
@@ -622,9 +846,10 @@ body {
   overflow: hidden;
 }
 
-.next-thumbnail {
-  width: 30px;
-  height: 30px;
+.next-thumbnail img { /* Target img */
+  display: block;
+  width: 28px; /* Adjust size */
+  height: 28px;
   border-radius: 2px;
   object-fit: cover;
   flex-shrink: 0;
@@ -637,6 +862,7 @@ body {
 .next-song-name {
   font-size: 0.8rem;
   font-weight: 500;
+  color: var(--text-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -644,7 +870,8 @@ body {
 
 .next-song-artist {
   font-size: 0.7rem;
-  opacity: 0.7;
+  /* opacity: 0.7; */
+  color: var(--text-secondary-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -722,7 +949,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
+  padding: 0.75rem; /* Restored padding */
   border-radius: 4px;
   transition: background-color var(--transition-speed);
 }
@@ -733,8 +960,12 @@ body {
 
 .song-info {
   display: flex;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column; /* Stack title and artist */
+  justify-content: center; /* Vertically center stacked text */
+  gap: 0.1rem; /* Minimal gap for stacked text */
+  flex-grow: 1;
+  margin-right: 1rem; /* Add space before play button */
+  overflow: hidden; /* Prevent text overflow issues */
 }
 
 .song-number {
@@ -744,19 +975,21 @@ body {
 }
 
 .song-thumbnail {
-  width: 40px;
-  height: 40px;
+  width: 40px; /* Restored size */
+  height: 40px; /* Restored size */
   border-radius: 4px;
   object-fit: cover;
+  margin-right: 0.75rem; /* Add consistent spacing */
 }
 
 .song-title {
-  font-weight: bold;
-  margin-bottom: 0.25rem;
+  font-weight: 500;
+  font-size: 1rem; /* Restored size */
+  margin-bottom: 0.2rem; /* Adjusted margin for stacking */
 }
 
 .song-artist {
-  font-size: 0.8rem;
+  font-size: 0.8rem; /* Restored size */
   opacity: 0.7;
 }
 
@@ -866,72 +1099,30 @@ body {
 .queue-list {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 0;
+  padding: 1rem; /* Add padding around the cards */
 }
 
+/* Style the cards container within the queue */
+.queue-list .cards-container.queue-cards {
+  grid-template-columns: 1fr; /* Force single column */
+  gap: 1rem; /* Adjust gap for single column */
+  /* Override minmax if needed, but 1fr should work */
+}
+
+/* Remove old queue item styles */
+/*
 .queue-item {
   display: flex;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  border-radius: 4px;
-  margin: 0 0.5rem 0.5rem 0.5rem;
-  position: relative;
-}
-
-.queue-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.queue-item.current {
-  background: rgba(29, 185, 84, 0.15);
-  border-left: 3px solid var(--primary-color);
-}
-
-.queue-number {
-  width: 24px;
-  font-size: 0.9rem;
-  opacity: 0.5;
-  text-align: center;
-}
-
-.queue-thumbnail {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-  margin: 0 1rem;
-  object-fit: cover;
-}
-
-.queue-item-info {
-  flex: 1;
-  overflow: hidden;
-}
-
-.queue-item-name {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.queue-item-artist {
-  font-size: 0.8rem;
-  opacity: 0.7;
-  white-space: nowrap;
-  overflow: hidden;
+// ... existing code ...
   text-overflow: ellipsis;
 }
 
 .playing-indicator {
   width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+// ... existing code ...
   margin-left: 0.5rem;
 }
+*/
 
 /* Responsive adjustments for queue */
 @media (max-width: 768px) {
@@ -1019,114 +1210,33 @@ body {
   z-index: 1;
 }
 
-/* Styles for the navigation bar */
-.navbar {
-  display: flex; /* Enable flexbox */
-  justify-content: space-between; /* Push left and right content apart */
-  align-items: center; /* Vertically align items in the middle */
-  padding: 0.8rem 1.5rem; /* Add some padding (vertical, horizontal) */
-  background-color: var(--card-color); /* Give it a background */
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Optional shadow */
-  position: sticky; /* Make it stick to the top */
-  top: 0;
-  z-index: 1000; /* Ensure it's above other content */
-}
-
-.navbar-left {
+/* Song controls - play/download buttons */
+.song-controls {
   display: flex;
-  align-items: center; /* Align items inside (logo div) */
+  align-items: center;
+  gap: 0.5rem;
 }
 
-/* Style the container holding the logo image and title */
-.navbar-left .logo {
-    display: flex;
-    align-items: center; /* Align logo img and h1 */
-    gap: 0.75rem; /* Space between logo img and h1 */
-}
-
-.navbar-left .logo h1 {
-    margin: 0; /* Remove default margin from h1 */
-    font-size: 1.5rem; /* Adjust title size */
-    color: var(--text-color);
-}
-
-.navbar-right {
-  display: flex;
-  align-items: center; /* Align items inside (buttons/menu) */
-  gap: 1rem; /* Add space between buttons */
-}
-
-/* Basic button styling (if not already present) */
-.navbar-right button {
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  cursor: pointer;
+.song-play,
+.download-button {
+  background: none;
   border: none;
-  font-size: 0.9rem;
+  color: var(--text-color);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.3rem;
+  line-height: 1;
+  opacity: 0.8;
+  transition: color 0.2s, opacity 0.2s;
 }
 
-.navbar-right .signin-button {
-  background-color: var(--primary-color, #22c55e); /* Use variable or fallback */
-  color: white;
+.song-play:hover,
+.download-button:hover {
+  color: var(--primary-color);
+  opacity: 1;
 }
 
-.navbar-right .debug-button {
-    background-color: #ffc107; /* Example: Warning color */
-    color: #333;
-}
-
-/* User Menu Specifics (if needed) */
-.navbar-right .user-menu {
-    position: relative; /* For dropdown positioning */
-}
-
-.navbar-right .profile-button {
-    display: flex;
-    align-items: center;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--text-color);
-    gap: 0.5rem;
-}
-
-.navbar-right .avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: var(--primary-color, #22c55e);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-}
-
-.navbar-right .dropdown-menu {
-    position: absolute;
-    top: calc(100% + 5px); /* Position below the button */
-    right: 0;
-    background-color: var(--surface-color, #1e1e1e);
-    border-radius: 5px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
-    padding: 0.5rem 0;
-    display: flex;
-    flex-direction: column;
-    min-width: 150px; /* Minimum width for dropdown */
-    z-index: 1001; /* Above navbar */
-}
-
-.navbar-right .dropdown-item {
-    background: none;
-    border: none;
-    color: var(--text-color);
-    padding: 0.75rem 1rem;
-    text-align: left;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-.navbar-right .dropdown-item:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+.song-play.playing {
+  color: var(--primary-color);
 }
 

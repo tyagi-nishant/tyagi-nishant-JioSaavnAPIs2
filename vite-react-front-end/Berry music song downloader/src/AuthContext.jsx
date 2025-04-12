@@ -1,8 +1,10 @@
-import { createContext, useState, useEffect, useContext } from 'react'
+import { createContext, useState, useEffect, useContext, useMemo } from 'react'
 import { supabase } from './supabase'
 
 // Create context
 const AuthContext = createContext()
+
+console.log("!!!! AuthProvider STARTING !!!!");
 
 // Authentication provider
 export function AuthProvider({ children }) {
@@ -76,7 +78,8 @@ export function AuthProvider({ children }) {
     (subscription.status === 'premium' || 
      (subscription.status === 'trial' && new Date(subscription.trial_ends_at) > new Date()))
 
-  const value = {
+  // Memoize the context value
+  const value = useMemo(() => ({
     user,
     session,
     loading,
@@ -97,13 +100,17 @@ export function AuthProvider({ children }) {
           ...newSubscriptionData
         })
 
-      if (!error) {
+      if (!error && data) {
         setSubscription(data[0] || newSubscriptionData)
+      } else if (error) {
+        console.error("Error updating subscription:", error);
       }
       
       return { data, error }
     }
-  }
+  }), [user, session, loading, subscription, hasPremiumAccess]);
+
+  console.log("AuthProvider rendering, loading:", loading);
 
   return (
     <AuthContext.Provider value={value}>
