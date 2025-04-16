@@ -8,12 +8,26 @@ export function Navbar({ showLoginModal, showSubscriptionModal }) {
   
   useEffect(() => {
     // Debug logging
-    console.log("Auth state in Navbar:", { user })
+    console.log("Navbar: Auth state changed:", { 
+      isLoggedIn: !!user, 
+      userEmail: user?.email,
+      userId: user?.id 
+    })
   }, [user])
   
   const handleSignOut = async () => {
-    await signOut()
-    setShowDropdown(false)
+    console.log("Navbar: Sign out button clicked")
+    try {
+      console.log("Navbar: Calling signOut function from AuthContext")
+      const result = await signOut()
+      console.log("Navbar: signOut function returned:", result)
+      setShowDropdown(false)
+      // Force a page reload to ensure all state is cleared
+      window.location.reload()
+    } catch (error) {
+      console.error("Navbar: Error during sign out:", error)
+      alert("Sign out failed. Please try again.")
+    }
   }
   
   const handleDebugClick = () => {

@@ -1111,12 +1111,19 @@ function BerryMusicApp() {
             <div className="player-controls">
               <button className="player-control" onClick={playPreviousSong}>⏮</button>
               <button 
-                className={`player-control ${isPlaying ? 'playing' : ''}`} 
+                className={`player-control play-pause ${isPlaying ? 'playing' : ''}`} 
                 onClick={() => setIsPlaying(!isPlaying)}
               >
                 {isPlaying ? '❚❚' : '▶'}
               </button>
               <button className="player-control" onClick={playNextSong}>⏭</button>
+              
+              {/* Add Download Button here */}
+              <DownloadButton 
+                song={currentlyPlaying} 
+                user={user} 
+                hasPremiumAccess={hasPremiumAccess} 
+              />
             </div>
             
             <div className="next-up">
