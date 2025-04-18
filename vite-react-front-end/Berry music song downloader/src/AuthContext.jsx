@@ -167,13 +167,17 @@ export function AuthProvider({ children }) {
       }
     },
     updateSubscription: async (newSubscriptionData) => { 
-      if (!user) return { error: { message: 'User not authenticated' } }
+      if (!user || !user.email) {
+         console.error("AuthContext: Cannot update subscription, user or user email is missing.");
+         return { error: { message: 'User not authenticated or email missing' } };
+      }
       
       console.log("AuthContext: Updating subscription with data:", newSubscriptionData);
       const { data, error } = await supabase
         .from('subscriptions')
         .upsert({ 
           user_id: user.id,
+          user_email: user.email,
           ...newSubscriptionData
         }, { onConflict: 'user_id' })
         .select()

@@ -21,8 +21,6 @@
   text-align: center;
 }
 
-
-
 /* Auth Header */
 .auth-header {
   margin-bottom: 1.5rem;
@@ -44,6 +42,18 @@
 .auth-error {
   background-color: #cf6679; /* Error color from theme */
   color: #121212; /* Dark text on error background */
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+/* Notification Message */
+.auth-notification {
+  /* background-color: #1db954; */ /* Original success/info color (green) */
+  background-color: #ff003c3c; /* Use reddish theme color (less transparent version) */
+  color: #ffffff; /* White text */
   padding: 0.75rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
@@ -138,6 +148,22 @@
 .auth-link:hover {
   /* color: #d0a0ff; */ /* Original lighter primary */
   color: #c0c0c0; /* Change hover to light grey */
+}
+
+/* Add some spacing for the forgot password link */
+.auth-extra-links {
+  text-align: right; /* Align link to the right */
+  margin-top: -0.5rem; /* Pull it up slightly closer to password */
+  margin-bottom: 1rem; /* Add space before the main button */
+}
+
+.forgot-password-link {
+  font-size: 0.85rem; /* Make it slightly smaller */
+  text-decoration: none; /* Remove underline by default */
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline; /* Add underline on hover */
 }
 
 /* Close Button Styling */

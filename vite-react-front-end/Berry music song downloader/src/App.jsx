@@ -38,6 +38,9 @@ function BerryMusicApp() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
+  // Ref to track if initial search has been triggered
+  const initialSearchTriggered = useRef(false);
+
   // Auth context data
   const { user, hasPremiumAccess } = useAuth();
 
@@ -45,6 +48,37 @@ function BerryMusicApp() {
   useEffect(() => {
     console.log("Auth state in App:", { user, hasPremiumAccess });
   }, [user, hasPremiumAccess]);
+
+  // Effect to trigger initial search ONCE after user logs in
+  useEffect(() => {
+    // Only run if user exists AND initial search hasn't been triggered yet
+    if (user && !initialSearchTriggered.current) {
+      console.log("User logged in, triggering initial search for 'new songs english'...");
+      initialSearchTriggered.current = true; // Mark as triggered
+      setSearchQuery("new songs english"); // Set the query to trigger the search effect
+    }
+    // If user logs out, reset the trigger flag so initial search can happen on next login
+    if (!user) {
+      initialSearchTriggered.current = false;
+    }
+  }, [user]); // Dependency: run when user state changes
+
+  // Effect to actually PERFORM the search when the query is set by the above effect
+  useEffect(() => {
+    // Check if the query is the specific initial one, trigger ref is true, 
+    // and we aren't already loading or showing results
+    if (
+      searchQuery === "new songs english" && 
+      initialSearchTriggered.current && 
+      !isLoading && 
+      !searchResults 
+    ) {
+      console.log("Search query matches initial trigger, calling handleSearch().");
+      handleSearch(); // Perform the search
+    }
+    // Note: Don't reset initialSearchTriggered.current here, 
+    // it should only reset on logout (handled in the user effect)
+  }, [searchQuery, isLoading, searchResults]); // Dependencies: run when query, loading, or results change
 
   // Utility function to ensure URLs use HTTPS and handle different image data types
   const ensureHttps = (imageUrlData) => {
