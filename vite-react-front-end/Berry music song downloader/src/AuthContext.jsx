@@ -14,6 +14,41 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [subscription, setSubscription] = useState(null)
 
+  // Function to fetch subscription
+  const fetchSubscription = async (userId) => {
+    console.log(`AuthProvider: fetchSubscription called for User ID: ${userId}`);
+    try {
+      console.log("AuthProvider: fetchSubscription - Attempting: supabase.from('subscriptions').select...");
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        // .single(); // Temporarily remove .single()
+        
+      console.log("AuthProvider: fetchSubscription - Raw fetch result:", { data, error });
+
+      // Adjust logic since data is now an array
+      if (data && data.length > 0 && !error) {
+        console.log("AuthProvider: fetchSubscription - Processing SUCCESS path (found data).");
+        setSubscription(data[0]); // Use the first record if found
+      } else if (error) {
+        console.log("AuthProvider: fetchSubscription - Processing ERROR path.");
+        // if (error.code !== 'PGRST116') { // Error code might differ without .single()
+        console.error("AuthProvider: fetchSubscription - Subscription fetch ERROR:", error);
+        // }
+        setSubscription(null);
+      } else {
+        // This condition might be hit if data is an empty array []
+        console.log("AuthProvider: fetchSubscription - Processing NO DATA path (empty array or null data).");
+        setSubscription(null);
+      }
+    } catch (fetchError) {
+      console.error("AuthProvider: fetchSubscription - EXCEPTION during fetch:", fetchError);
+      setSubscription(null); // Ensure state is null on exception
+    }
+    console.log(`AuthProvider: fetchSubscription finished for User ID: ${userId}`);
+  };
+
   useEffect(() => {
     console.log("AuthProvider: useEffect[] running (Mount)");
     const setInitialSession = async () => {
@@ -25,26 +60,12 @@ export function AuthProvider({ children }) {
         setUser(initialSession?.user || null)
 
         if (initialSession?.user) {
-          console.log("AuthProvider: Initial user found, attempting subscription fetch...");
-          const { data, error } = await supabase
-            .from('subscriptions')
-            .select('*')
-            .eq('user_id', initialSession.user.id)
-            .single()
-            
-          if (data && !error) {
-            console.log("AuthProvider: Initial subscription fetch SUCCESS. Data:", data);
-            setSubscription(data) // *** State Update 1 ***
-          } else if (error) {
-            console.error("AuthProvider: Initial subscription fetch ERROR:", error); 
-            setSubscription(null); // *** State Update 2 ***
-          } else {
-            console.log("AuthProvider: Initial subscription fetch returned NO DATA.");
-            setSubscription(null); // *** State Update 3 ***
-          }
+          console.log(`AuthProvider: Initial user found (ID: ${initialSession.user.id}), calling fetchSubscription...`);
+          // Don't await here, let it run in background
+          fetchSubscription(initialSession.user.id);
         } else {
-          console.log("AuthProvider: No initial user, skipping subscription fetch.");
-          setSubscription(null); // *** State Update 4 ***
+          console.log("AuthProvider: No initial user, setting subscription to null.");
+          setSubscription(null);
         }
       } catch (error) {
         console.error('AuthContext: Error in setInitialSession:', error)
@@ -58,7 +79,7 @@ export function AuthProvider({ children }) {
     setInitialSession()
 
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      (event, newSession) => { // Removed async here
         console.log(`AuthProvider: onAuthStateChange triggered. Event: "${event}"`, newSession ? 'New session exists' : 'No new session');
         
         // Setting session/user/loading immediately
@@ -67,25 +88,9 @@ export function AuthProvider({ children }) {
         setLoading(false) // Ensure loading is false on auth change
         
         if (newSession?.user) {
-          console.log("AuthProvider: onAuthStateChange - User exists, attempting subscription fetch...");
-          const { data, error } = await supabase
-            .from('subscriptions')
-            .select('*')
-            .eq('user_id', newSession.user.id)
-            .single()
-            
-          if (data && !error) {
-             console.log("AuthProvider: onAuthStateChange - Subscription fetch SUCCESS. Data:", data);
-             setSubscription(data) // *** State Update 6 ***
-          } else if (error) {
-             if (error.code !== 'PGRST116') { // Don't log error if it's just 'No rows found'
-               console.error("AuthProvider: onAuthStateChange - Subscription fetch ERROR:", error);
-             }
-             setSubscription(null) // *** State Update 7 ***
-          } else {
-            console.log("AuthProvider: onAuthStateChange - Subscription fetch returned NO DATA.");
-            setSubscription(null) // *** State Update 8 ***
-          }
+          console.log(`AuthProvider: onAuthStateChange - User exists (ID: ${newSession.user.id}), calling fetchSubscription...`); 
+          // Call the separate function, do NOT await it here
+          fetchSubscription(newSession.user.id);
         } else {
           console.log("AuthProvider: onAuthStateChange - No user session, clearing subscription.");
           setSubscription(null) // *** State Update 9 ***
@@ -103,18 +108,27 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => {
     console.log("AuthProvider: useMemo recalculating context value.");
     
-    // Calculate hasPremiumAccess INSIDE useMemo
-    const calculatedHasPremiumAccess = !!subscription && 
-      (subscription.status === 'premium' || 
-       (subscription.status === 'trial' && subscription.trial_ends_at && new Date(subscription.trial_ends_at) > new Date()));
-    console.log(`AuthProvider: (inside useMemo) Calculated hasPremiumAccess = ${calculatedHasPremiumAccess} (Subscription state: ${JSON.stringify(subscription)})`);
+    // --- Start Access Calculations ---
+    const isPremium = !!subscription && subscription.status === 'premium';
+    const isTrial = !!subscription && subscription.status === 'trial' && subscription.trial_ends_at && new Date(subscription.trial_ends_at) > new Date();
+    const isBasic = !!subscription && subscription.status === 'basic';
+
+    // Premium access (includes active trial)
+    const calculatedHasPremiumAccess = isPremium || isTrial;
+
+    // Basic access or higher (includes premium and active trial)
+    const calculatedCanSearchAndStream = isBasic || isPremium || isTrial;
+    // --- End Access Calculations ---
+
+    console.log(`AuthProvider: (inside useMemo) Subscription: ${JSON.stringify(subscription)}, Premium: ${calculatedHasPremiumAccess}, Basic+: ${calculatedCanSearchAndStream}`);
 
     return {
         user,
         session,
         loading,
         subscription, 
-        hasPremiumAccess: calculatedHasPremiumAccess, // Use the calculated value
+        hasPremiumAccess: calculatedHasPremiumAccess, // For downloads
+        canSearchAndStream: calculatedCanSearchAndStream, // For search & streaming
         supabase, 
         signUp: (data) => supabase.auth.signUp(data),
         signIn: (data) => supabase.auth.signInWithPassword(data),
@@ -125,60 +139,42 @@ export function AuthProvider({ children }) {
           try {
             console.log("AuthContext: Attempting supabase.auth.signOut() with timeout...");
 
-            // Promise for the actual sign out call
             const signOutPromise = supabase.auth.signOut();
-
-            // Promise for the timeout (e.g., 5 seconds)
             const timeoutPromise = new Promise((_, reject) => {
               signOutTimeoutId = setTimeout(() => {
                 console.warn("AuthContext: supabase.auth.signOut() timed out after 5 seconds.");
                 reject(new Error("Sign out timed out"));
-              }, 1000); // 5 seconds
+              }, 5000);
             });
 
-            // Race the sign out against the timeout
             const { error: signOutError } = await Promise.race([signOutPromise, timeoutPromise]);
 
-            // If we reached here, sign out finished (successfully or with error) before timeout
             clearTimeout(signOutTimeoutId);
             signOutTimeoutId = null;
 
             if (signOutError) {
               console.error("AuthContext: supabase.auth.signOut() returned an error:", signOutError);
-              // Error occurred, but state will be cleared in finally block
             } else {
               console.log("AuthContext: supabase.auth.signOut() completed successfully via API (before timeout).");
-              // Success, state will be cleared in finally block
             }
 
           } catch (error) {
-            // This catches errors like the timeout or other exceptions
             console.error("AuthContext: Exception caught during signOut process (could be timeout):", error);
-            // Ensure timeout is cleared if it exists and an error occurred
             if (signOutTimeoutId) {
               clearTimeout(signOutTimeoutId);
             }
-            // State clearing will happen in finally block
           } finally {
-            // ALWAYS clear React state regardless of success, failure, or timeout
             console.log("AuthContext: Entering finally block for signOut. Clearing local state.");
             setUser(null);
             setSession(null);
             setSubscription(null);
-            // No need to interact with localStorage here, let Supabase manage its state
             console.log("AuthContext: Local React state cleared.");
-            
-            // Optional: Re-add page refresh here if needed for absolute UI consistency
-            // console.log("Navbar: Refreshing page in 1 second...");
-            // setTimeout(() => { window.location.reload(); }, 1000);
           }
-          
-          // No return value needed as state clearing is the primary goal here
         },
-        updateSubscription: async (newSubscriptionData) => { 
+        updateSubscription: async (newSubscriptionData) => {
           if (!user || !user.email) {
-             console.error("AuthContext: Cannot update subscription, user or user email is missing.");
-             return { error: { message: 'User not authenticated or email missing' } };
+            console.error("AuthContext: Cannot update subscription, user or user email is missing.");
+            return { error: { message: 'User not authenticated or email missing' } };
           }
           
           console.log("AuthContext: Updating subscription with data:", newSubscriptionData);
@@ -201,7 +197,7 @@ export function AuthProvider({ children }) {
           }
         }
     };
-  }, [user, session, loading, subscription, supabase]); // Remove hasPremiumAccess from dependencies, keep subscription
+  }, [user, session, loading, subscription]); // Removed supabase, added subscription dependency
 
   console.log("AuthProvider: Rendering children. Loading:", loading);
 

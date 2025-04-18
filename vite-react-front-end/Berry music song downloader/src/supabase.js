@@ -1,8 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Replace with your Supabase URL and anon key
-const supabaseUrl = 'https://mryfanarpbnauvrhzhgq.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yeWZhbmFycGJuYXV2cmh6aGdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMTU0NDUsImV4cCI6MjA1OTg5MTQ0NX0.lb-1M1kHxLFNwgL-hp2y7cGIE0fC5VgH3TMNA9Hb3-U'
+// Log the environment variables to verify they are loaded
+console.log("Supabase Init: VITE_SUPABASE_URL =", import.meta.env.VITE_SUPABASE_URL);
+console.log("Supabase Init: VITE_SUPABASE_ANON_KEY =", import.meta.env.VITE_SUPABASE_ANON_KEY ? '*** Loaded ***' : '!!! NOT LOADED !!!');
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Check if the variables are actually defined
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("Supabase Init Error: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing!");
+  // Optionally throw an error or handle this case appropriately
+  // throw new Error("Supabase environment variables are not configured.");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey,
     {

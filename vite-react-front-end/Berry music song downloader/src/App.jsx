@@ -42,7 +42,7 @@ function BerryMusicApp() {
   const initialSearchTriggered = useRef(false);
 
   // Auth context data
-  const { user, hasPremiumAccess } = useAuth();
+  const { user, hasPremiumAccess, canSearchAndStream } = useAuth();
 
   // Effect to clear search/detail state on logout
   useEffect(() => {
@@ -72,36 +72,30 @@ function BerryMusicApp() {
     console.log("Auth state in App:", { user, hasPremiumAccess });
   }, [user, hasPremiumAccess]);
 
-  // Effect to trigger initial search ONCE after user logs in
+  // Effect to trigger initial search
   useEffect(() => {
-    // Only run if user exists AND initial search hasn't been triggered yet
     if (user && !initialSearchTriggered.current) {
-      console.log("User logged in, triggering initial search for 'new songs english'...");
-      initialSearchTriggered.current = true; // Mark as triggered
-      setSearchQuery("new songs english"); // Set the query to trigger the search effect
+      console.log("User logged in, triggering initial search...");
+      initialSearchTriggered.current = true;
+      setSearchQuery("new songs english");
     }
-    // If user logs out, reset the trigger flag so initial search can happen on next login
     if (!user) {
       initialSearchTriggered.current = false;
     }
-  }, [user]); // Dependency: run when user state changes
+  }, [user]); // Remove authLoading dependency
 
-  // Effect to actually PERFORM the search when the query is set by the above effect
+  // Effect to perform search
   useEffect(() => {
-    // Check if the query is the specific initial one, trigger ref is true, 
-    // and we aren't already loading or showing results
     if (
-      searchQuery === "new songs english" && 
-      initialSearchTriggered.current && 
-      !isLoading && 
-      !searchResults 
+        searchQuery === "new songs english" && 
+        initialSearchTriggered.current && 
+        !isLoading && 
+        !searchResults 
     ) {
       console.log("Search query matches initial trigger, calling handleSearch().");
-      handleSearch(); // Perform the search
+      handleSearch();
     }
-    // Note: Don't reset initialSearchTriggered.current here, 
-    // it should only reset on logout (handled in the user effect)
-  }, [searchQuery, isLoading, searchResults]); // Dependencies: run when query, loading, or results change
+  }, [searchQuery, isLoading, searchResults]); // Remove authLoading dependency
 
   // Utility function to ensure URLs use HTTPS and handle different image data types
   const ensureHttps = (imageUrlData) => {
@@ -311,7 +305,18 @@ function BerryMusicApp() {
     }
   };
 
+  // Function to play a song - REMOVE ACCESS CHECK
   const playSong = async (song, contextSongs = []) => {
+    // console.log(`Attempting to play song: ${song?.name}. Has Basic+ access: ${canSearchAndStream}`);
+
+    // *** REMOVED ACCESS CHECK ***
+    // if (!canSearchAndStream) {
+    //     alert("Please upgrade to Basic or Premium to play songs from search or details.");
+    //     console.warn("Playback blocked: User requires Basic+ subscription.");
+    //     return; 
+    // }
+    // *** END REMOVED ACCESS CHECK ***
+
     // First check if this is a toggle action (clicking on the current song)
     if (currentlyPlaying?.id === song.id) {
       // Just toggle play/pause for the same song
@@ -968,27 +973,35 @@ function BerryMusicApp() {
       )} */}
       
       <div className="main-container">
+        {/* Show loading indicator while AuthContext is loading */} 
         <div className={`main-content ${showQueue ? 'with-queue' : ''}`}>
           
-          {/* Search Bar - Conditionally render only if user is logged in */}
+          {/* Search Bar - Render only if user is logged in */} 
           {user && (
             <div className="search-container">
               <input
                 type="text"
                 className="search-input"
-                placeholder="Search millions of songs..."
+                placeholder={canSearchAndStream ? "Search millions of songs..." : "Upgrade to Basic/Premium to search"}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyPress={(e) => e.key === 'Enter' && canSearchAndStream && handleSearch()}
+                disabled={!canSearchAndStream}
+                title={!canSearchAndStream ? "Search requires a Basic or Premium subscription" : ""}
               />
-              <button className="search-button" onClick={handleSearch}>
+              <button 
+                className="search-button"
+                onClick={handleSearch}
+                disabled={!canSearchAndStream}
+                title={!canSearchAndStream ? "Search requires a Basic or Premium subscription" : ""}
+              >
                 Search
               </button>
             </div>
           )}
           {/* End Search Bar */}
-          
-          {/* Detail view or search results */}
+      
+          {/* Detail view or search results */} 
           {selectedDetail ? (
             <div className="detail-view">
               <div className="detail-header">
@@ -1022,6 +1035,7 @@ function BerryMusicApp() {
             </div>
           ) : (
             <div className="search-results">
+              {/* Check internal loading state for search specifically */}
               {isLoading ? (
                 <div className="loading">Searching...</div>
               ) : searchResults ? (
@@ -1113,7 +1127,10 @@ function BerryMusicApp() {
                   </div>
                 )
               ) : (
-                renderWelcomeScreen()
+                // Show welcome screen only if logged in and no results/loading
+                !user ? renderWelcomeScreen() : null 
+                // If user is logged in but no search results, show nothing initially
+                // (The initial search effect will populate results)
               )}
             </div>
           )}
