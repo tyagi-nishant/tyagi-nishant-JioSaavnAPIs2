@@ -107,6 +107,7 @@ export function AuthProvider({ children }) {
     loading,
     subscription,
     hasPremiumAccess,
+    supabase: supabase,
     // Auth functions
     signUp: (data) => supabase.auth.signUp(data),
     signIn: (data) => supabase.auth.signInWithPassword(data),
