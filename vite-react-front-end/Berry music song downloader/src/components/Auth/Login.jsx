@@ -10,37 +10,28 @@ export function Login({ onClose }) {
   const [mode, setMode] = useState('login') // 'login', 'signup', or 'forgotPassword'
   const [notification, setNotification] = useState(null);
   
-  // Need supabase instance directly for password reset
-  const { signIn, signUp, supabase } = useAuth() 
+  const { signIn, signUp, supabase } = useAuth()
 
-  // Refs for timeout logic
+  // Restore Refs and useEffects for timeout logic
   const loadingRef = useRef(false);
   const timeoutRef = useRef(null);
 
-  // Keep loadingRef synced with loading state
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
+  useEffect(() => { 
+    // Cleanup timeout on unmount
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
   }, []);
 
-  // Helper to switch mode and clear messages
   const handleModeSwitch = (newMode) => {
     setMode(newMode);
     setError(null);
     setNotification(null);
-    // Optionally clear fields (especially password when switching TO forgotPassword)
     if (newMode === 'forgotPassword') {
       setPassword('');
     } else if (newMode === 'login' || newMode === 'signup') {
-      // Clear notification when switching back from forgotPassword success
       setNotification(null); 
     }
   };
@@ -51,22 +42,25 @@ export function Login({ onClose }) {
     setNotification(null);
     setLoading(true)
 
-    // Clear previous timeout just in case
+    // Clear previous timeout (if any)
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
     }
 
-    // Set a 3-second timeout to check if still processing
-    timeoutRef.current = setTimeout(() => {
-      console.log('Login timeout check triggered...');
-      if (loadingRef.current) {
-        console.warn('Modal appears stuck in processing state. Attempting to close modal via onClose().');
-        if (onClose) onClose();
-        setLoading(false); 
-      } else {
-        console.log('Login timeout check: Loading is false, no action needed.');
-      }
-    }, 1000);
+    // Start timeout ONLY for login mode
+    if (mode === 'login') {
+      timeoutRef.current = setTimeout(() => {
+        console.log('Login mode timeout check triggered...');
+        if (loadingRef.current) {
+          console.warn('Login modal appears stuck in processing state. Attempting to close modal via onClose().');
+          if (onClose) onClose();
+          setLoading(false); // Also set loading false if timeout closes it
+        } else {
+          console.log('Login mode timeout check: Loading is false, no action needed.');
+        }
+      }, 1000); // 3 seconds for login timeout
+    }
 
     try {
       let response
@@ -77,49 +71,46 @@ export function Login({ onClose }) {
         if (response.error) throw response.error;
         console.log("Login successful, calling onClose");
         if (onClose) onClose();
+        // setLoading(false) will be handled in finally for login
 
       } else if (mode === 'signup') {
-        response = await signUp({ email, password }); // Removed options as Supabase handles defaults
+        response = await signUp({ email, password });
         console.log("Login component: Received response from signUp:", response);
         if (response.error) throw response.error;
         console.log("Signup successful, showing notification.");
         setNotification("Account created! Please check your email for a confirmation link to activate your account and log in.");
         setEmail(''); 
         setPassword('');
-        setLoading(false); // Explicitly stop loading indicator for signup success message
-        if (timeoutRef.current) clearTimeout(timeoutRef.current); // Clear timeout early for signup success
+        setLoading(false); // Set loading false immediately for signup success
+        // No timeout was started for signup, so no need to clear here
 
       } else if (mode === 'forgotPassword') {
-        if (!supabase) throw new Error('Supabase client not available'); // Guard clause
+        if (!supabase) throw new Error('Supabase client not available'); 
         console.log(`Attempting password reset for email: ${email}`);
-        // Redirect URL should point to where users can set a new password in your app
-        // For now, just redirecting to the base URL after confirmation.
-        // You'll need to set up a password reset page/route later.
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin, // Or your specific reset password page URL
+          redirectTo: window.location.origin, 
         });
         console.log("Password reset response:", { resetError });
         if (resetError) throw resetError;
         setNotification("Password reset link sent! Please check your email (including spam folder).");
-        setEmail(''); // Clear email field after sending
-        setLoading(false); // Stop loading indicator
-        if (timeoutRef.current) clearTimeout(timeoutRef.current); // Clear timeout early
+        setEmail('');
+        setLoading(false); // Set loading false immediately for reset success
+        // No timeout was started for forgotPassword, so no need to clear here
       }
       
     } catch (error) {
       console.error(`Error during ${mode}:`, error);
       setError(error.message || 'An error occurred. Please try again.')
+      setLoading(false); // Ensure loading is false on ANY error
     } finally {
-      // Clear timeout if it hasn't been cleared already (e.g., on error)
+      // Clear timeout if it exists (this handles login mode success/error)
       if (timeoutRef.current) {
-        console.log('Clearing timeout in finally block (if still active).');
+        console.log('Clearing login timeout in finally block.');
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
-      // Ensure loading is false if an error occurred or on login success (already handled for signup/reset)
-      if (mode === 'login' || error) {
-         setLoading(false);
-      } 
+       // Ensure loading is false (might be redundant but safe)
+      setLoading(false); 
     }
   }
 
