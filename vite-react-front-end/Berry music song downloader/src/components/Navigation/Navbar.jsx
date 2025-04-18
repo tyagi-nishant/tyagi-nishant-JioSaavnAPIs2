@@ -22,21 +22,16 @@ export function Navbar({ showLoginModal, showSubscriptionModal }) {
       const result = await signOut()
       console.log("Navbar: signOut function returned:", result)
       setShowDropdown(false)
-      // Force a page reload to ensure all state is cleared
-      window.location.reload()
+
+      // Add a 1-second delay before refreshing
+      console.log("Navbar: Sign out successful. Refreshing page in 1 second...");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000); // 1000 milliseconds = 1 second
+
     } catch (error) {
       console.error("Navbar: Error during sign out:", error)
       alert("Sign out failed. Please try again.")
-    }
-  }
-  
-  const handleDebugClick = () => {
-    console.log("Debug click - showLoginModal:", showLoginModal)
-    console.log("Current auth state:", { user })
-    if (showLoginModal) {
-      showLoginModal()
-    } else {
-      console.error("showLoginModal function not provided")
     }
   }
   
@@ -74,14 +69,9 @@ export function Navbar({ showLoginModal, showSubscriptionModal }) {
             )}
           </div>
         ) : (
-          <>
-            <button className="signin-button" onClick={showLoginModal}>
-              Sign In
-            </button>
-            <button className="debug-button" onClick={handleDebugClick}>
-              Debug Login
-            </button>
-          </>
+          <button className="search-button signin-standalone" onClick={showLoginModal}>
+            Sign In
+          </button>
         )}
       </div>
     </nav>

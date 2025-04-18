@@ -324,8 +324,9 @@ body {
 }
 
 .queue-toggle.active {
-  background-color: var(--primary-color);
-  color: white;
+  /* background-color: var(--primary-color); */ /* Original pink background */
+  background-color: #e0e0e0; /* Use a light grey/off-white background */
+  color: #121212; /* Use dark text for contrast */
 }
 
 /* Main content styles */
@@ -1045,8 +1046,9 @@ body {
 }
 
 .queue-toggle.active {
-  background: rgba(29, 185, 84, 0.25);
-  border-color: rgba(29, 185, 84, 0.5);
+  /* background-color: var(--primary-color); */ /* Original pink background */
+  background-color: #e0e0e0; /* Use a light grey/off-white background */
+  color: #121212; /* Use dark text for contrast */
 }
 
 .queue-sidebar {
@@ -1079,7 +1081,8 @@ body {
 .queue-header h3 {
   margin: 0;
   font-size: 1.2rem;
-  color: var(--primary-color);
+  /* color: var(--primary-color); */ /* Original primary color */
+  color: var(--text-color); /* Change to standard text color (white) */
 }
 
 .queue-close {

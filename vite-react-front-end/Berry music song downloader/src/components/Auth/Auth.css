@@ -1,1 +1,167 @@
- 
+/* Auth Container */
+.auth-container {
+  /* This container might be part of the modal overlay structure from App.jsx */
+  /* Add styles if needed, e.g., for positioning within the overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 1rem; /* Add padding for smaller screens */
+}
+
+/* Auth Card - The main box for login/signup */
+.auth-card {
+  background-color: #2a2a2a; /* Default dark card background */
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 400px;
+  position: relative; /* Needed for absolute positioning of the close button */
+  text-align: center;
+}
+
+
+
+/* Auth Header */
+.auth-header {
+  margin-bottom: 1.5rem;
+}
+
+.auth-header h2 {
+  color: #e1e1e1; /* Light text color */
+  margin-bottom: 0.25rem;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.auth-header p {
+  color: #a0a0a0; /* Secondary text color */
+  font-size: 0.9rem;
+}
+
+/* Error Message */
+.auth-error {
+  background-color: #cf6679; /* Error color from theme */
+  color: #121212; /* Dark text on error background */
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+/* Auth Form */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #a0a0a0;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1px solid rgba(225, 225, 225, 0.2);
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #e1e1e1;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  border-color: #bb86fc; /* Primary color from dark theme */
+}
+
+/* Auth Button (Login/Signup inside the form) */
+.auth-button {
+  padding: 0.9rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  /* background-color: #bb86fc; */ /* Original primary color */
+  background-color: #ff003c3c; /* Apply reddish background */
+  /* color: #121212; */ /* Original dark text */
+  color: white; /* Set text to white */
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+  margin-top: 0.5rem; /* Add some space above the button */
+}
+
+.auth-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  /* Ensure disabled state doesn't inherit reddish background if needed */
+  /* background-color: #555; /* Example disabled color */
+}
+
+.auth-button:not(:disabled):hover {
+  /* background-color: #a050f8; */ /* Original darker primary */
+  background-color: #ff003c80; /* Darker reddish on hover */
+  color: white; /* Ensure text stays white on hover */
+}
+
+/* Auth Footer (Switch between Login/Signup) */
+.auth-footer {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #a0a0a0;
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  /* color: #bb86fc; */ /* Original primary color */
+  color: var(--text-color, white); /* Change link text to white */
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  font-size: inherit;
+}
+
+.auth-link:hover {
+  /* color: #d0a0ff; */ /* Original lighter primary */
+  color: #c0c0c0; /* Change hover to light grey */
+}
+
+/* Close Button Styling */
+.auth-close-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(0, 0, 0, 0.2); /* Subtle dark background */
+  border: none;
+  color: rgba(255, 255, 255, 0.7); /* White-ish text */
+  font-size: 1.5rem; /* Make the 'x' bigger */
+  line-height: 1;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%; /* Make it circular */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+  padding: 0; /* Reset padding */
+}
+
+.auth-close-button:hover {
+  background-color: rgba(0, 0, 0, 0.4);
+  color: white;
+} 

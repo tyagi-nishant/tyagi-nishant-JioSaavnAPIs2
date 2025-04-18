@@ -32,7 +32,7 @@ function BerryMusicApp() {
   const progressBarRef = useRef(null);
   
   // State for showing queue sidebar
-  const [showQueue, setShowQueue] = useState(window.innerWidth > 768); // Hide queue by default on mobile
+  const [showQueue, setShowQueue] = useState(false); // Default to closed
   const [isLoadingMoreSongs, setIsLoadingMoreSongs] = useState(false);
   const [currentAutoSearchTerm, setCurrentAutoSearchTerm] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -913,20 +913,22 @@ function BerryMusicApp() {
       <div className="main-container">
         <div className={`main-content ${showQueue ? 'with-queue' : ''}`}>
           
-          {/* Search Bar - Moved here to be always visible */} 
-          <div className="search-container">
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search millions of songs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <button className="search-button" onClick={handleSearch}>
-              Search
-            </button>
-          </div>
+          {/* Search Bar - Conditionally render only if user is logged in */}
+          {user && (
+            <div className="search-container">
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search millions of songs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <button className="search-button" onClick={handleSearch}>
+                Search
+              </button>
+            </div>
+          )}
           {/* End Search Bar */}
           
           {/* Detail view or search results */}
