@@ -4,6 +4,9 @@ import './Download.css'
 
 export function DownloadButton({ song }) {
   const { hasPremiumAccess, user } = useAuth()
+  // Log the received hasPremiumAccess value
+  console.log("DownloadButton: Received hasPremiumAccess:", hasPremiumAccess, "User:", user?.email);
+  
   const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState(null)
   

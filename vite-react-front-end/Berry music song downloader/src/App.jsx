@@ -44,6 +44,29 @@ function BerryMusicApp() {
   // Auth context data
   const { user, hasPremiumAccess } = useAuth();
 
+  // Effect to clear search/detail state on logout
+  useEffect(() => {
+    if (!user) {
+      console.log("App.jsx: User logged out, resetting UI state.");
+      // Reset search
+      setSearchQuery('');
+      setSearchResults(null);
+      // Reset detail view
+      setSelectedDetail(null);
+      setDetailType(null);
+      setDetailSongs([]);
+      // Reset queue and player
+      setSongQueue([]);
+      setCurrentQueueIndex(-1);
+      setCurrentlyPlaying(null);
+      setAudioUrl(null);
+      setIsPlaying(false);
+      // Reset pagination/query tracking if needed
+      setOriginalQuery('');
+      setCurrentPage(1);
+    }
+  }, [user]); // Run this effect when the user object changes
+
   // Add debug logging
   useEffect(() => {
     console.log("Auth state in App:", { user, hasPremiumAccess });

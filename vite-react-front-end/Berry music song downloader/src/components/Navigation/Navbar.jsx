@@ -25,11 +25,10 @@ export function Navbar({ showLoginModal, showSubscriptionModal }) {
 
       // Add a 1-second delay before refreshing
       console.log("Navbar: Sign out successful. Refreshing page in 1 second...");
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000); // 1000 milliseconds = 1 second
+      
 
     } catch (error) {
+      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
       console.error("Navbar: Error during sign out:", error)
       alert("Sign out failed. Please try again.")
     }

@@ -66,7 +66,7 @@ export function Login({ onClose }) {
       } else {
         console.log('Login timeout check: Loading is false, no action needed.');
       }
-    }, 3000);
+    }, 1000);
 
     try {
       let response
