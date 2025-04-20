@@ -42,12 +42,15 @@ function BerryMusicApp() {
   const initialSearchTriggered = useRef(false);
 
   // Auth context data
-  const { user, hasPremiumAccess, canSearchAndStream } = useAuth();
+  const { user, hasPremiumAccess, canSearchAndStream, session } = useAuth();
+
+  // Define the base URL for the backend API
+  const baseUrl = 'https://berry2.vercel.app/';
 
   // Effect to clear search/detail state on logout
   useEffect(() => {
     if (!user) {
-      console.log("App.jsx: User logged out, resetting UI state.");
+      // console.log("App.jsx: User logged out, resetting UI state.");
       // Reset search
       setSearchQuery('');
       setSearchResults(null);
@@ -69,13 +72,13 @@ function BerryMusicApp() {
 
   // Add debug logging
   useEffect(() => {
-    console.log("Auth state in App:", { user, hasPremiumAccess });
+    // console.log("Auth state in App:", { user, hasPremiumAccess });
   }, [user, hasPremiumAccess]);
 
   // Effect to trigger initial search
   useEffect(() => {
     if (user && !initialSearchTriggered.current) {
-      console.log("User logged in, triggering initial search...");
+      // console.log("User logged in, triggering initial search...");
       initialSearchTriggered.current = true;
       setSearchQuery("new songs english");
     }
@@ -92,7 +95,7 @@ function BerryMusicApp() {
         !isLoading && 
         !searchResults 
     ) {
-      console.log("Search query matches initial trigger, calling handleSearch().");
+      // console.log("Search query matches initial trigger, calling handleSearch().");
       handleSearch();
     }
   }, [searchQuery, isLoading, searchResults]); // Remove authLoading dependency
@@ -125,12 +128,23 @@ function BerryMusicApp() {
     return url.replace(/^http:\/\//i, 'https://');
   };
 
+  // Function to create headers for authenticated requests
+  const getAuthHeaders = () => {
+    const headers = {
+      'Content-Type': 'application/json', // Default content type
+    };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+    return headers;
+  };
+
   // Function to fetch next page of songs and append to queue
   const fetchAndAppendSimilarSongs = async () => {
-    console.log(`📋 fetchAndAppendSimilarSongs called, originalQuery: "${originalQuery}", isLoadingMoreSongs: ${isLoadingMoreSongs}`);
+    // console.log(`📋 fetchAndAppendSimilarSongs called, originalQuery: "${originalQuery}", isLoadingMoreSongs: ${isLoadingMoreSongs}`);
     
     if (!originalQuery || isLoadingMoreSongs) {
-      console.log("⚠️ Cannot fetch more songs: originalQuery is empty or already loading");
+      // console.log("⚠️ Cannot fetch more songs: originalQuery is empty or already loading");
       return false;
     }
     
@@ -141,25 +155,25 @@ function BerryMusicApp() {
       const nextPage = currentPage + 1;
       setCurrentAutoSearchTerm(`${originalQuery} (page ${nextPage})`);
       
-      console.log(`🔄 Extending queue: Fetching page ${nextPage} for "${originalQuery}"`);
-      console.log(`📊 Current queue length before fetch: ${songQueue.length}`);
+      // console.log(`🔄 Extending queue: Fetching page ${nextPage} for "${originalQuery}"`);
+      // console.log(`📊 Current queue length before fetch: ${songQueue.length}`);
       
       // Display the loading indicator for at least 1 second to ensure user sees it
       const fetchStartTime = Date.now();
       
-      const baseUrl = 'https://jio-saavn2.vercel.app/';
+      // const baseUrl = 'https://jio-saavn2.vercel.app/'; // <<< Remove this line
       
       // Make the search request for songs with pagination
       const url = `${baseUrl}api/search/songs?query=${encodeURIComponent(originalQuery)}&page=${nextPage}`;
-      console.log(`🌐 Fetching from URL: ${url}`);
+      // console.log(`🌐 Fetching from URL: ${url}`);
       
-      const response = await fetch(url);
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log(`✅ API response received, success: ${data.success}`);
+      // console.log(`✅ API response received, success: ${data.success}`);
       
       let songsAdded = false;
       
@@ -168,23 +182,23 @@ function BerryMusicApp() {
         
         // Since we're paginating the same search, we'll add all songs from next page
         // even if they have the same IDs (the API might return duplicates across pages)
-        console.log(`✅ Found ${newSongs.length} songs on page ${nextPage}`);
+        // console.log(`✅ Found ${newSongs.length} songs on page ${nextPage}`);
         
         // Add all songs from the new page
         setSongQueue(prevQueue => {
           const updatedQueue = [...prevQueue, ...newSongs];
-          console.log(`📊 Updated queue length: ${updatedQueue.length} (added ${newSongs.length} songs)`);
+          // console.log(`📊 Updated queue length: ${updatedQueue.length} (added ${newSongs.length} songs)`);
           return updatedQueue;
         });
         
-        console.log(`✅ Added ${newSongs.length} songs from page ${nextPage} to the queue`);
+        // console.log(`✅ Added ${newSongs.length} songs from page ${nextPage} to the queue`);
         songsAdded = true;
         
         // Update the current page
         setCurrentPage(nextPage);
-        console.log(`📄 Current page updated to ${nextPage}`);
+        // console.log(`📄 Current page updated to ${nextPage}`);
       } else {
-        console.log(`⚠️ No results found on page ${nextPage} for "${originalQuery}"`);
+        // console.log(`⚠️ No results found on page ${nextPage} for "${originalQuery}"`);
       }
       
       // Ensure loading indicator displays for at least 1 second
@@ -192,11 +206,11 @@ function BerryMusicApp() {
       const fetchDuration = fetchEndTime - fetchStartTime;
       if (fetchDuration < 1000) {
         const waitTime = 1000 - fetchDuration;
-        console.log(`⏱️ Waiting ${waitTime}ms to ensure loading indicator is visible`);
+        // console.log(`⏱️ Waiting ${waitTime}ms to ensure loading indicator is visible`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
       
-      console.log(`📋 fetchAndAppendSimilarSongs completed, songsAdded: ${songsAdded}`);
+      // console.log(`📋 fetchAndAppendSimilarSongs completed, songsAdded: ${songsAdded}`);
       return songsAdded; // Return whether songs were added
     } catch (error) {
       console.error('🐞 Error fetching next page of songs:', error);
@@ -213,21 +227,21 @@ function BerryMusicApp() {
     }
     setSearchResults(null); // Clear previous results and indicate loading (optional)
     try {
-      const baseUrl = 'https://jio-saavn2.vercel.app/';
+      // const baseUrl = 'https://jio-saavn2.vercel.app/'; // <<< Remove this line
       
       // Store the original query when performing a search and reset page counter
       setOriginalQuery(searchQuery);
       setCurrentPage(1);
       
       // Make the global search request
-      const response = await fetch(`${baseUrl}api/search?query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${baseUrl}api/search?query=${encodeURIComponent(searchQuery)}`, { headers: getAuthHeaders() });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       
       if (!data.success) {
-        console.error("Search failed:", data.message);
+        // console.error("Search failed:", data.message);
         setSearchResults({ error: data.message || 'Search failed' });
         return;
       }
@@ -235,7 +249,7 @@ function BerryMusicApp() {
       // Create a merged result set starting with the global search results
       const mergedResults = { ...data.data };
       
-      // Array of additional search requests to make
+      // Array of additional search requests to make (Ensure these use the component-level baseUrl)
       const additionalSearches = [
         {
           type: 'songs',
@@ -249,49 +263,39 @@ function BerryMusicApp() {
           type: 'artists',
           url: `${baseUrl}api/search/artists?query=${encodeURIComponent(searchQuery)}&limit=20`
         },
-        {
-          type: 'playlists',
-          url: `${baseUrl}api/search/playlists?query=${encodeURIComponent(searchQuery)}&limit=20`
-        }
+        // Assuming playlists are also searched similarly, add if needed:
+        // {
+        //   type: 'playlists',
+        //   url: `${baseUrl}api/search/playlists?query=${encodeURIComponent(searchQuery)}&limit=20`
+        // }
       ];
-      
-      // Make all additional search requests in parallel
-      const additionalSearchPromises = additionalSearches.map(search => 
-        fetch(search.url)
-          .then(res => res.ok ? res.json() : null)
-          .catch(err => {
-            console.error(`Error fetching additional ${search.type}:`, err);
-            return null; // Return null on error so Promise.all doesn't fail
-          })
-      );
-      
-      // Wait for all additional searches to complete
-      const additionalResults = await Promise.all(additionalSearchPromises);
-      
-      // Process each set of additional results
-      additionalSearches.forEach((search, index) => {
-        const result = additionalResults[index];
-        
-        if (result && result.success && result.data && result.data.results && 
-            mergedResults[search.type] && mergedResults[search.type].results) {
-          
-          // Create a Set of existing IDs for fast lookup
-          const existingIds = new Set(mergedResults[search.type].results.map(item => item.id));
-          
-          // Filter out duplicates and add new items
-          const additionalItems = result.data.results.filter(item => !existingIds.has(item.id));
-          
-          // Append additional items to the results
-          if (additionalItems.length > 0) {
-            mergedResults[search.type] = {
-              ...mergedResults[search.type],
-              results: [...mergedResults[search.type].results, ...additionalItems]
-            };
+
+      // Fetch details for each type
+      const results = await Promise.all(additionalSearches.map(async (search) => {
+        try {
+          const response = await fetch(search.url, { headers: getAuthHeaders() });
+          if (!response.ok) {
+            // console.error(`Error fetching ${search.type}: ${response.statusText}`);
+            return { type: search.type, data: [] }; // Return empty on error
           }
+          const searchData = await response.json();
+          return { 
+            type: search.type, 
+            data: searchData?.data?.results || [] // Use optional chaining and provide default
+          };
+        } catch (error) {
+          // console.error(`Error fetching ${search.type}:`, error);
+          return { type: search.type, data: [] }; // Return empty on fetch error
         }
+      }));
+
+      // Populate the merged results object
+      results.forEach(result => {
+        mergedResults[result.type] = { results: result.data }; // Match expected structure
       });
       
-      setSearchResults(mergedResults);
+      // console.log("API Search Results:", mergedResults);
+      setSearchResults(mergedResults); // Update state with all results
       
       // Automatically populate the queue with songs on search
       if (mergedResults.songs && mergedResults.songs.results && mergedResults.songs.results.length > 0) {
@@ -300,14 +304,14 @@ function BerryMusicApp() {
       }
       
     } catch (error) {
-      console.error("Search error:", error);
-      setSearchResults({ error: error.message || 'An error occurred during search' });
+      // console.error('Error performing search:', error);
+      setSearchResults({ error: 'Failed to fetch search results.' });
     }
   };
 
   // Function to play a song - REMOVE ACCESS CHECK
   const playSong = async (song, contextSongs = []) => {
-    // console.log(`Attempting to play song: ${song?.name}. Has Basic+ access: ${canSearchAndStream}`);
+    // // console.log(`Attempting to play song: ${song?.name}. Has Basic+ access: ${canSearchAndStream}`);
 
     // *** REMOVED ACCESS CHECK ***
     // if (!canSearchAndStream) {
@@ -362,7 +366,7 @@ function BerryMusicApp() {
   
   // Function to load and play a song
   const loadAndPlaySong = async (song) => {
-    console.log(">>> loadAndPlaySong START:", song?.name, "ID:", song?.id);
+    // console.log(">>> loadAndPlaySong START:", song?.name, "ID:", song?.id);
     if (!song || !song.id) {
       console.error('Error: Invalid song data passed to loadAndPlaySong', song);
       setIsPlaying(false);
@@ -372,10 +376,10 @@ function BerryMusicApp() {
     }
 
     try {
-      // --- FETCH DETAILED SONG INFO --- 
-      console.log(`>>> Fetching details for song ID: ${song.id}`);
-      const baseUrl = 'https://jio-saavn2.vercel.app/';
-      const detailsResponse = await fetch(`${baseUrl}api/songs?ids=${song.id}`);
+      setIsLoading(true); // Set loading state
+      // console.log(`Fetching details for song ID: ${song.id}`);
+      // Ensure this fetch uses the component-level baseUrl
+      const detailsResponse = await fetch(`${baseUrl}api/songs?ids=${song.id}`, { headers: getAuthHeaders() });
       if (!detailsResponse.ok) {
         throw new Error(`HTTP error fetching song details! status: ${detailsResponse.status}`);
       }
@@ -384,7 +388,7 @@ function BerryMusicApp() {
         throw new Error('Failed to get valid song details from API');
       }
       const detailedSong = detailsData.data[0];
-      console.log(">>> Received detailed song data:", detailedSong);
+      // console.log(">>> Received detailed song data:", detailedSong);
       // --- END FETCH --- 
 
       // Now use detailedSong.downloadUrl
@@ -394,7 +398,7 @@ function BerryMusicApp() {
       }
 
       const lastDownloadObject = detailedSong.downloadUrl.slice(-1)[0];
-      console.log(">>> Last download object structure:", lastDownloadObject);
+      // console.log(">>> Last download object structure:", lastDownloadObject);
       const bestQualityUrl = lastDownloadObject?.link || lastDownloadObject?.url;
 
       if (!bestQualityUrl || typeof bestQualityUrl !== 'string') {
@@ -403,30 +407,32 @@ function BerryMusicApp() {
       }
 
       const httpsUrl = ensureHttps(bestQualityUrl);
-      console.log(`>>> Setting audioUrl to: ${httpsUrl}`);
+      // console.log(`>>> Setting audioUrl to: ${httpsUrl}`);
       setAudioUrl(httpsUrl);
 
-      console.log(">>> Setting currentlyPlaying:", detailedSong); // Use detailed song data
+      // console.log(">>> Setting currentlyPlaying:", detailedSong); // Use detailed song data
       setCurrentlyPlaying(detailedSong); // Use detailed song data
 
-      console.log(">>> loadAndPlaySong END:", detailedSong?.name);
+      // console.log(">>> loadAndPlaySong END:", detailedSong?.name);
     } catch (error) {
-      console.error('>>> loadAndPlaySong FAILED:', error);
+      // console.error('>>> loadAndPlaySong FAILED:', error);
       setIsPlaying(false);
       setAudioUrl(null);
       setCurrentlyPlaying(null);
+    } finally {
+      setIsLoading(false);
     }
   };
   
   // Effect to handle AUDIO SOURCE changes and INITIATE PLAY
   useEffect(() => {
     if (audioRef.current && audioUrl) {
-      console.log(`>>> useEffect[audioUrl]: New URL detected: ${audioUrl}. Setting src and loading.`);
+      // console.log(`>>> useEffect[audioUrl]: New URL detected: ${audioUrl}. Setting src and loading.`);
       audioRef.current.src = audioUrl;
       // We don't call play() here directly anymore.
       // We rely on the 'canplaythrough' event listener below.
     } else if (audioRef.current) {
-      console.log(">>> useEffect[audioUrl]: audioUrl is null. Pausing and resetting src.");
+      // console.log(">>> useEffect[audioUrl]: audioUrl is null. Pausing and resetting src.");
       audioRef.current.pause();
       audioRef.current.removeAttribute('src'); // Reset src if URL is null
     }
@@ -439,9 +445,9 @@ function BerryMusicApp() {
 
     // Function to attempt playing
     const attemptPlay = () => {
-      console.log(">>> attemptPlay: Trying to play...");
+      // console.log(">>> attemptPlay: Trying to play...");
       audio.play().then(() => {
-        console.log(">>> attemptPlay: Play successful.");
+        // console.log(">>> attemptPlay: Play successful.");
         setIsPlaying(true); // Sync state ONLY after successful play
       }).catch(error => {
         console.error('>>> attemptPlay: Error playing audio:', error);
@@ -452,29 +458,29 @@ function BerryMusicApp() {
 
     // Event listener for when the browser can play the whole file
     const handleCanPlayThrough = () => {
-      console.log(">>> handleCanPlayThrough: Audio ready. Attempting play.");
+      // console.log(">>> handleCanPlayThrough: Audio ready. Attempting play.");
       if (currentlyPlaying) { // Only play if a song is loaded
         attemptPlay();
       }
     };
 
     // Add event listener when component mounts or audio ref changes
-    console.log(">>> useEffect[play/pause]: Adding 'canplaythrough' listener.");
+    // console.log(">>> useEffect[play/pause]: Adding 'canplaythrough' listener.");
     audio.addEventListener('canplaythrough', handleCanPlayThrough);
 
     // Initial check: If we are supposed to be playing and have a URL, try playing
     // (This handles cases where play was intended but interrupted before 'canplaythrough')
     if (isPlaying && audioUrl) {
-      console.log(">>> useEffect[play/pause]: Initial state isPlaying=true, attempting play.");
+      // console.log(">>> useEffect[play/pause]: Initial state isPlaying=true, attempting play.");
       attemptPlay();
     } else if (!isPlaying) {
-      console.log(">>> useEffect[play/pause]: Initial state isPlaying=false, pausing.");
+      // console.log(">>> useEffect[play/pause]: Initial state isPlaying=false, pausing.");
       audio.pause();
     }
 
     // Cleanup function
     return () => {
-      console.log(">>> useEffect[play/pause]: Removing 'canplaythrough' listener.");
+      // console.log(">>> useEffect[play/pause]: Removing 'canplaythrough' listener.");
       audio.removeEventListener('canplaythrough', handleCanPlayThrough);
     };
   }, [isPlaying, currentlyPlaying]); // Depends on isPlaying intent and which song is loaded
@@ -502,7 +508,7 @@ function BerryMusicApp() {
       loadAndPlaySong(songQueue[updatedNextIndex]);
     } else {
       // If we're at the end of the queue, stop playback
-      console.log("Reached end of queue, stopping playback");
+      // console.log("Reached end of queue, stopping playback");
       setIsPlaying(false);
       // Keep the current song selected but paused
     }
@@ -526,19 +532,19 @@ function BerryMusicApp() {
 
   // Handle track ending - play next song
   const handleTrackEnded = () => {
-    console.log("🔄 Track ended event fired!");
-    console.log(`Current queue index: ${currentQueueIndex}, Queue length: ${songQueue.length}`);
+    // console.log("🔄 Track ended event fired!");
+    // console.log(`Current queue index: ${currentQueueIndex}, Queue length: ${songQueue.length}`);
     
     // We need special handling since we can't make this an async function directly
     // First check if we're at the end of the queue
     const nextIndex = currentQueueIndex + 1;
     
     if (nextIndex >= songQueue.length) {
-      console.log("📢 End of queue reached, fetching more songs...");
+      // console.log("📢 End of queue reached, fetching more songs...");
       // Using a separate function to handle the async operations
       handleEndOfQueueAutoplay();
     } else {
-      console.log(`▶️ Playing next song in queue (index ${nextIndex})`);
+      // console.log(`▶️ Playing next song in queue (index ${nextIndex})`);
       setCurrentQueueIndex(nextIndex);
       loadAndPlaySong(songQueue[nextIndex]);
     }
@@ -546,14 +552,14 @@ function BerryMusicApp() {
   
   // Helper function to handle autoplay when reaching end of queue
   const handleEndOfQueueAutoplay = async () => {
-    console.log("🔄 handleEndOfQueueAutoplay started");
+    // console.log("🔄 handleEndOfQueueAutoplay started");
     try {
       // Set a loading state to prevent multiple calls
       setIsLoadingMoreSongs(true);
-      console.log("⏳ Loading state set to true");
+      // console.log("⏳ Loading state set to true");
       
       // Try to fetch more songs
-      console.log("🔍 Attempting to fetch more songs...");
+      // console.log("🔍 Attempting to fetch more songs...");
       
       // Instead of using the return value, we'll directly modify the queue and track if we added songs
       let newSongsAdded = false;
@@ -566,29 +572,29 @@ function BerryMusicApp() {
           const nextPage = currentPage + 1;
           setCurrentAutoSearchTerm(`${originalQuery} (page ${nextPage})`);
           
-          console.log(`🔄 Extending queue: Fetching page ${nextPage} for "${originalQuery}"`);
-          console.log(`📊 Current queue index: ${currentQueueIndex}, Current queue length: ${songQueue.length}`);
+          // console.log(`🔄 Extending queue: Fetching page ${nextPage} for "${originalQuery}"`);
+          // console.log(`📊 Current queue index: ${currentQueueIndex}, Current queue length: ${songQueue.length}`);
           
           // Display the loading indicator for at least 1 second to ensure user sees it
           const fetchStartTime = Date.now();
           
-          const baseUrl = 'https://jio-saavn2.vercel.app/';
+          // const baseUrl = 'https://jio-saavn2.vercel.app/'; // <<< Remove this line
           
           // Make the search request for songs with pagination
           const url = `${baseUrl}api/search/songs?query=${encodeURIComponent(originalQuery)}&page=${nextPage}`;
-          console.log(`🌐 Fetching from URL: ${url}`);
+          // console.log(`🌐 Fetching from URL: ${url}`);
           
-          const response = await fetch(url);
+          const response = await fetch(url, { headers: getAuthHeaders() });
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           
           const data = await response.json();
-          console.log(`✅ API response received, success: ${data.success}`);
+          // console.log(`✅ API response received, success: ${data.success}`);
           
           if (data.success && data.data && data.data.results && data.data.results.length > 0) {
             const newSongs = data.data.results;
-            console.log(`✅ Found ${newSongs.length} songs on page ${nextPage}`);
+            // console.log(`✅ Found ${newSongs.length} songs on page ${nextPage}`);
             
             // Get the song that will be next
             nextSongToPlay = newSongs[0];
@@ -597,15 +603,15 @@ function BerryMusicApp() {
             // Update the queue and store the updated queue
             setSongQueue(prevQueue => {
               const updatedQueue = [...prevQueue, ...newSongs];
-              console.log(`📊 Updated queue length: ${updatedQueue.length} (added ${newSongs.length} songs)`);
+              // console.log(`📊 Updated queue length: ${updatedQueue.length} (added ${newSongs.length} songs)`);
               return updatedQueue;
             });
             
             // Update the current page
             setCurrentPage(nextPage);
-            console.log(`📄 Current page updated to ${nextPage}`);
+            // console.log(`📄 Current page updated to ${nextPage}`);
           } else {
-            console.log(`⚠️ No results found on page ${nextPage} for "${originalQuery}"`);
+            // console.log(`⚠️ No results found on page ${nextPage} for "${originalQuery}"`);
           }
           
           // Ensure loading indicator displays for at least 1 second
@@ -613,7 +619,7 @@ function BerryMusicApp() {
           const fetchDuration = fetchEndTime - fetchStartTime;
           if (fetchDuration < 1000) {
             const waitTime = 1000 - fetchDuration;
-            console.log(`⏱️ Waiting ${waitTime}ms to ensure loading indicator is visible`);
+            // console.log(`⏱️ Waiting ${waitTime}ms to ensure loading indicator is visible`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
           }
         } catch (error) {
@@ -623,21 +629,21 @@ function BerryMusicApp() {
       
       // After all updates, decide what to do next
       if (newSongsAdded && nextSongToPlay) {
-        console.log("🎵 Playing the first song from the newly added songs");
+        // console.log("🎵 Playing the first song from the newly added songs");
         // Increment current queue index - the new song will be right after current index
         const newNextIndex = currentQueueIndex + 1;
         setCurrentQueueIndex(newNextIndex);
         loadAndPlaySong(nextSongToPlay);
       } else {
         // No more songs were added, stop playback
-        console.log("⛔ No more songs could be added to the queue, stopping playback");
+        // console.log("⛔ No more songs could be added to the queue, stopping playback");
         setIsPlaying(false);
       }
     } catch (error) {
       console.error("🐞 Error handling end of queue autoplay:", error);
       setIsPlaying(false);
     } finally {
-      console.log("⏳ Loading state set to false");
+      // console.log("⏳ Loading state set to false");
       setIsLoadingMoreSongs(false);
     }
   };
@@ -651,18 +657,12 @@ function BerryMusicApp() {
 
   // View album details
   const viewAlbum = async (album) => {
+    // console.log("Viewing album:", album);
+    setSearchResults(null); // Clear search results
     setIsLoading(true);
-    setSelectedDetail(album);
-    setDetailType('album');
-    setDetailSongs([]);
-    
-    // Set original query to album name for future auto-queue
-    setOriginalQuery(album.name);
-    setCurrentPage(1); // Reset pagination counter
-    
     try {
-      const baseUrl = 'https://jio-saavn2.vercel.app/';
-      const response = await fetch(`${baseUrl}api/albums?id=${album.id}`);
+      // Ensure this fetch uses the component-level baseUrl
+      const response = await fetch(`${baseUrl}api/albums?id=${album.id}`, { headers: getAuthHeaders() });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -673,10 +673,10 @@ function BerryMusicApp() {
       if (data.success && data.data) {
         setDetailSongs(data.data.songs || []);
       } else {
-        console.error('Failed to fetch album details');
+        // console.error('Failed to fetch album details');
       }
     } catch (error) {
-      console.error('Error fetching album details:', error);
+      // console.error('Error fetching album details:', error);
     } finally {
       setIsLoading(false);
     }
@@ -684,18 +684,12 @@ function BerryMusicApp() {
   
   // View artist details
   const viewArtist = async (artist) => {
+    // console.log("Viewing artist:", artist);
+    setSearchResults(null);
     setIsLoading(true);
-    setSelectedDetail(artist);
-    setDetailType('artist');
-    setDetailSongs([]);
-    
-    // Set original query to artist name for future auto-queue
-    setOriginalQuery(artist.name);
-    setCurrentPage(1); // Reset pagination counter
-    
     try {
-      const baseUrl = 'https://jio-saavn2.vercel.app/';
-      const response = await fetch(`${baseUrl}api/artists?id=${artist.id}`);
+      // Ensure this fetch uses the component-level baseUrl
+      const response = await fetch(`${baseUrl}api/artists?id=${artist.id}`, { headers: getAuthHeaders() });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -706,10 +700,10 @@ function BerryMusicApp() {
       if (data.success && data.data && data.data.songs) {
         setDetailSongs(data.data.songs || []);
       } else {
-        console.error('Failed to fetch artist details');
+        // console.error('Failed to fetch artist details');
       }
     } catch (error) {
-      console.error('Error fetching artist details:', error);
+      // console.error('Error fetching artist details:', error);
     } finally {
       setIsLoading(false);
     }
@@ -717,18 +711,12 @@ function BerryMusicApp() {
   
   // View playlist details
   const viewPlaylist = async (playlist) => {
+    // console.log("Viewing playlist:", playlist);
+    setSearchResults(null);
     setIsLoading(true);
-    setSelectedDetail(playlist);
-    setDetailType('playlist');
-    setDetailSongs([]);
-    
-    // Set original query to playlist name for future auto-queue
-    setOriginalQuery(playlist.name);
-    setCurrentPage(1); // Reset pagination counter
-    
     try {
-      const baseUrl = 'https://jio-saavn2.vercel.app/';
-      const response = await fetch(`${baseUrl}api/playlists?id=${playlist.id}`);
+      // Ensure this fetch uses the component-level baseUrl
+      const response = await fetch(`${baseUrl}api/playlists?id=${playlist.id}`, { headers: getAuthHeaders() });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -739,10 +727,10 @@ function BerryMusicApp() {
       if (data.success && data.data && data.data.songs) {
         setDetailSongs(data.data.songs || []);
       } else {
-        console.error('Failed to fetch playlist details');
+        // console.error('Failed to fetch playlist details');
       }
     } catch (error) {
-      console.error('Error fetching playlist details:', error);
+      // console.error('Error fetching playlist details:', error);
     } finally {
       setIsLoading(false);
     }
@@ -854,7 +842,7 @@ function BerryMusicApp() {
   // Function to render a single song item
   const renderSongItem = (song, index, context = 'search') => {
     if (!song || !song.id) {
-      console.warn("Attempted to render invalid song item:", song);
+      // console.warn("Attempted to render invalid song item:", song);
       return null;
     }
     
@@ -901,7 +889,7 @@ function BerryMusicApp() {
           {hasPremiumAccess && (
             <button 
               className="download-button"
-              onClick={() => console.log('Download clicked for:', song.name, 'Premium:', hasPremiumAccess)}
+              // onClick={() => console.log('Download clicked for:', song.name, 'Premium:', hasPremiumAccess)}
               title="Download song (Premium required)"
             >
               ⬇️
@@ -956,11 +944,11 @@ function BerryMusicApp() {
     <div className="music-app dark-theme">
       <Navbar 
         showLoginModal={() => {
-          console.log("Opening login modal");
+          // console.log("Opening login modal");
           setShowLoginModal(true);
         }} 
         showSubscriptionModal={() => {
-          console.log("Opening subscription modal");
+          // console.log("Opening subscription modal");
           setShowSubscriptionModal(true);
         }} 
       />

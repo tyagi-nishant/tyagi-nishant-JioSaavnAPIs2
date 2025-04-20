@@ -1,11 +1,53 @@
-import { OpenAPIHono } from '@hono/zod-openapi'
+import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
 import { apiReference } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
+import { bearerAuth } from 'hono/bearer-auth'
+import * as jose from 'jose'
+import type { MiddlewareHandler, Context, Next } from 'hono'
 import { Home } from './pages/home'
 import type { Routes } from '#common/types'
 import type { HTTPException } from 'hono/http-exception'
+
+// --- Define Authentication Middleware ---
+// Retrieve the Supabase JWT Secret from Environment Variables
+const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+let authMiddleware: MiddlewareHandler;
+
+if (!JWT_SECRET) {
+  // console.warn("SUPABASE_JWT_SECRET environment variable is not set! Auth middleware WILL NOT WORK.");
+  // // Create a dummy middleware if secret is missing
+  // authMiddleware = (c: Context, next: Next) => next();
+  throw new Error("CRITICAL: SUPABASE_JWT_SECRET environment variable is not set. Application cannot start securely.");
+} else {
+  // Supabase requires the secret to be encoded
+  const secret = new TextEncoder().encode(JWT_SECRET);
+  
+  authMiddleware = bearerAuth({
+    verifyToken: async (token, c) => {
+      try {
+        const { payload } = await jose.jwtVerify(token, secret, {
+          // audience: 'authenticated', // Optional: Add audience check
+        });
+        // Token is valid!
+        if (payload.sub) {
+          c.set('userId', payload.sub);
+        }
+        return true;
+      } catch (e) {
+        // Handle error type safely
+        if (e instanceof Error) {
+           console.error("JWT Verification failed:", e.message);
+        } else {
+           console.error("JWT Verification failed with unknown error type:", e);
+        }
+        return false;
+      }
+    }
+  });
+}
+// --- End Authentication Middleware Definition ---
 
 export class App {
   private app: OpenAPIHono
@@ -21,11 +63,21 @@ export class App {
   }
 
   private initializeRoutes(routes: Routes[]) {
+    // Create a single router where the auth middleware is applied to all routes
+    const protectedApiRouter = new OpenAPIHono();
+    protectedApiRouter.use('*/*', authMiddleware); // Apply auth middleware to all methods/paths within this router
+
+    // Mount all controllers onto this protected router
     routes.forEach((route) => {
       route.initRoutes()
-      this.app.route('/api', route.controller)
-    })
+      console.log(`Mounting controller ${route.constructor.name} under protected /api`);
+      protectedApiRouter.route('/', route.controller); // Mount controller routes relative to the protected router
+    });
 
+    // Mount the single protected router onto the main app at /api
+    this.app.route('/api', protectedApiRouter); 
+
+    // Mount the public Home route separately
     this.app.route('/', Home)
   }
 

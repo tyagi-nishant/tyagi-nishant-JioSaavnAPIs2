@@ -3,34 +3,33 @@ import { useAuth } from '../../AuthContext'
 import './Navbar.css'
 
 export function Navbar({ showLoginModal, showSubscriptionModal }) {
-  const { user, signOut } = useAuth()
+  const { user, session, signOut } = useAuth()
   const [showDropdown, setShowDropdown] = useState(false)
   
   useEffect(() => {
-    // Debug logging
-    console.log("Navbar: Auth state changed:", { 
-      isLoggedIn: !!user, 
-      userEmail: user?.email,
-      userId: user?.id 
-    })
-  }, [user])
+    // Log auth state changes for debugging
+    // console.log("Navbar: Auth state changed:", {
+    //   user: user ? user.email : 'null',
+    //   sessionExists: !!session,
+    //   // Avoid logging the full token here
+    // });
+  }, [user, session])
   
   const handleSignOut = async () => {
-    console.log("Navbar: Sign out button clicked")
+    // console.log("Navbar: Sign out button clicked")
     try {
-      console.log("Navbar: Calling signOut function from AuthContext")
+      // console.log("Navbar: Calling signOut function from AuthContext")
       const result = await signOut()
-      console.log("Navbar: signOut function returned:", result)
-      setShowDropdown(false)
+      // console.log("Navbar: signOut function returned:", result)
+      // Optionally handle result, though AuthContext now handles internal state clearing
 
-      // Add a 1-second delay before refreshing
-      console.log("Navbar: Sign out successful. Refreshing page in 1 second...");
-      
-
+      // Force a page refresh after 1 second to ensure clean state (optional)
+      // console.log("Navbar: Sign out successful. Refreshing page in 1 second...");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
-      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      console.error("Navbar: Error during sign out:", error)
-      alert("Sign out failed. Please try again.")
+      console.error("Navbar: Error during sign out:", error);
     }
   }
   

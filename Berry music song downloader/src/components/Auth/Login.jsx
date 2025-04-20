@@ -14,7 +14,7 @@ export function Login({ onClose }) {
 
   // Restore Refs and useEffects for timeout logic
   const loadingRef = useRef(false);
-  const timeoutRef = useRef(null);
+  const loginTimeoutRef = useRef(null);
 
   useEffect(() => {
     loadingRef.current = loading;
@@ -22,7 +22,7 @@ export function Login({ onClose }) {
 
   useEffect(() => { 
     // Cleanup timeout on unmount
-    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+    return () => { if (loginTimeoutRef.current) clearTimeout(loginTimeoutRef.current); };
   }, []);
 
   const handleModeSwitch = (newMode) => {
@@ -43,23 +43,21 @@ export function Login({ onClose }) {
     setLoading(true)
 
     // Clear previous timeout (if any)
-    if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+    if (loginTimeoutRef.current) {
+        clearTimeout(loginTimeoutRef.current);
+        loginTimeoutRef.current = null;
     }
 
     // Start timeout ONLY for login mode
     if (mode === 'login') {
-      timeoutRef.current = setTimeout(() => {
-        console.log('Login mode timeout check triggered...');
+      loginTimeoutRef.current = setTimeout(() => {
         if (loadingRef.current) {
           console.warn('Login modal appears stuck in processing state. Attempting to close modal via onClose().');
-          if (onClose) onClose();
-          setLoading(false); // Also set loading false if timeout closes it
+          setError('Login timed out. Please try again.');
+          setLoading(false);
         } else {
-          console.log('Login mode timeout check: Loading is false, no action needed.');
         }
-      }, 1000); // 3 seconds for login timeout
+      }, 3000); // 3 seconds for login timeout
     }
 
     try {
@@ -67,50 +65,45 @@ export function Login({ onClose }) {
       
       if (mode === 'login') {
         response = await signIn({ email, password });
-        console.log("Login component: Received response from signIn:", response);
-        if (response.error) throw response.error;
-        console.log("Login successful, calling onClose");
-        if (onClose) onClose();
-        // setLoading(false) will be handled in finally for login
-
+        if (!response.error) {
+          onClose();
+        } else {
+          setError(response.error.message);
+        }
       } else if (mode === 'signup') {
         response = await signUp({ email, password });
-        console.log("Login component: Received response from signUp:", response);
-        if (response.error) throw response.error;
-        console.log("Signup successful, showing notification.");
-        setNotification("Account created! Please check your email for a confirmation link to activate your account and log in.");
-        setEmail(''); 
-        setPassword('');
-        setLoading(false); // Set loading false immediately for signup success
-        // No timeout was started for signup, so no need to clear here
-
+        if (!response.error) {
+          setNotification('Signup successful! Please check your email to verify your account.');
+          setLoading(false);
+        } else {
+          setLoading(false);
+          setError(response.error.message);
+        }
       } else if (mode === 'forgotPassword') {
         if (!supabase) throw new Error('Supabase client not available'); 
-        console.log(`Attempting password reset for email: ${email}`);
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin, 
+          redirectTo: `${window.location.origin}/reset-password`,
         });
-        console.log("Password reset response:", { resetError });
-        if (resetError) throw resetError;
-        setNotification("Password reset link sent! Please check your email (including spam folder).");
-        setEmail('');
-        setLoading(false); // Set loading false immediately for reset success
-        // No timeout was started for forgotPassword, so no need to clear here
+        if (!resetError) {
+          setNotification('Password reset email sent! Please check your inbox.');
+        } else {
+          setError(resetError.message);
+        }
+        setLoading(false);
       }
       
     } catch (error) {
-      console.error(`Error during ${mode}:`, error);
-      setError(error.message || 'An error occurred. Please try again.')
-      setLoading(false); // Ensure loading is false on ANY error
+      setError(error.message);
+      setLoading(false);
     } finally {
       // Clear timeout if it exists (this handles login mode success/error)
-      if (timeoutRef.current) {
-        console.log('Clearing login timeout in finally block.');
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+      if (loginTimeoutRef.current) {
+        clearTimeout(loginTimeoutRef.current);
+        loginTimeoutRef.current = null;
       }
-       // Ensure loading is false (might be redundant but safe)
-      setLoading(false); 
+      if (mode === 'login') {
+        setLoading(false);
+      }
     }
   }
 
